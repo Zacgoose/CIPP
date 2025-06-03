@@ -7,7 +7,6 @@ on:
     - cron: '26 17 * * 0'
 jobs:
   analyze:
-    if: github.repository_owner == 'KelvinTegelaar'
     name: Analyze
     runs-on: ubuntu-latest
     permissions:
@@ -20,12 +19,12 @@ jobs:
         language: ['javascript']
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v1
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v1
+        uses: github/codeql-action/autobuild@v3
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v1
+        uses: github/codeql-action/analyze@v3
