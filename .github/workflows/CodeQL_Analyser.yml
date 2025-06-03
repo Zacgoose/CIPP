@@ -5,6 +5,7 @@ on:
     branches: [master, main, dev, react]
   schedule:
     - cron: '26 17 * * 0'
+  workflow_dispatch:
 jobs:
   analyze:
     name: Analyze
