@@ -1,7 +1,7 @@
 import { Layout as DashboardLayout } from "/src/layouts/index.js";
 import { useSettings } from "/src/hooks/use-settings";
 import { useRouter } from "next/router";
-import { ApiGetCall, ApiPostCall } from "/src/api/ApiCall";
+import { ApiGetCall } from "/src/api/ApiCall";
 import CippFormSkeleton from "/src/components/CippFormPages/CippFormSkeleton";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import {
@@ -29,7 +29,7 @@ import CippExchangeSettingsForm from "../../../../../components/CippFormPages/Ci
 import { useForm } from "react-hook-form";
 import { Alert, Button, Collapse, CircularProgress, Typography } from "@mui/material";
 import { CippApiResults } from "../../../../../components/CippComponents/CippApiResults";
-import { Block, PlayArrow, Add } from "@mui/icons-material";
+import { Block, PlayArrow} from "@mui/icons-material";
 import { CippPropertyListCard } from "../../../../../components/CippCards/CippPropertyListCard";
 import { getCippTranslation } from "../../../../../utils/get-cipp-translation";
 import { getCippFormatting } from "../../../../../utils/get-cipp-formatting";
@@ -184,8 +184,6 @@ const Page = () => {
       };
     },
   };
-
-  // This effect is no longer needed since we use CippApiDialog for form handling
 
   useEffect(() => {
     if (permissionsDialog.open) {
@@ -633,8 +631,6 @@ const Page = () => {
     },
   ];
 
-  // Proxy address actions implementations are handled by the CippAliasDialog component
-
   const proxyAddressesCard = [
     {
       id: 1,
@@ -700,10 +696,6 @@ const Page = () => {
       },
     },
   ];
-
-  // These API request objects are no longer needed as they're handled by CippApiDialog
-
-  // Calendar permissions dialog functionality is now handled by the CippCalendarPermissionsDialog component
 
   return (
     <HeaderedTabbedLayout

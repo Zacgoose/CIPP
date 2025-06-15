@@ -1,26 +1,23 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
   Card,
   Collapse,
   Divider,
-  IconButton,
   Stack,
   SvgIcon,
   Typography,
   Tooltip,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import CippFormComponent from "/src/components/CippComponents/CippFormComponent";
-import { CippFormCondition } from "/src/components/CippComponents/CippFormCondition";
-import { Forward } from "@mui/icons-material";
 import { ApiGetCall, ApiPostCall } from "../../api/ApiCall";
 import { useSettings } from "../../hooks/use-settings";
 import { Grid } from "@mui/system";
 import { CippApiResults } from "../CippComponents/CippApiResults";
 import { useWatch } from "react-hook-form";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import CippForwardingSection from "../CippComponents/CippForwardingSection";
 
 const CippExchangeSettingsForm = (props) => {
   const userSettingsDefaults = useSettings();
@@ -37,22 +34,6 @@ const CippExchangeSettingsForm = (props) => {
 
   // Calculate if date fields should be disabled
   const areDateFieldsDisabled = autoReplyState?.value !== "Scheduled";
-  
-  useEffect(() => {
-    console.log('Auto Reply State changed:', {
-      autoReplyState,
-      areDateFieldsDisabled,
-      fullFormValues: formControl.getValues()
-    });
-  }, [autoReplyState]);
-
-  // Add debug logging for form values
-  useEffect(() => {
-    const subscription = formControl.watch((value, { name, type }) => {
-      console.log('Form value changed:', { name, type, value });
-    });
-    return () => subscription.unsubscribe();
-  }, [formControl]);
 
   const handleExpand = (panel) => {
     setExpandedPanel((prev) => (prev === panel ? null : panel));
@@ -126,79 +107,17 @@ const CippExchangeSettingsForm = (props) => {
   const sections = [
     {
       id: "mailboxForwarding",
-      cardLabelBox: currentSettings?.ForwardAndDeliver ? <Forward /> : "-",
+      cardLabelBox: currentSettings?.Mailbox?.[0]?.ForwardingAddress ? "FWD" : "-",
       text: "Mailbox Forwarding",
       subtext: "Configure email forwarding options",
       formContent: (
-        <Stack spacing={2}>
-          <CippFormComponent
-            type="radio"
-            name="forwarding.forwardOption"
-            formControl={formControl}
-            options={[
-              { label: "Forward to Internal Address", value: "internalAddress" },
-              {
-                label: "Forward to External Address (Tenant must allow this)",
-                value: "ExternalAddress",
-              },
-              { label: "Disable Email Forwarding", value: "disabled" },
-            ]}
-          />
-
-          <CippFormCondition
-            formControl={formControl}
-            field="forwarding.forwardOption"
-            compareType="is"
-            compareValue="internalAddress"
-          >
-            <CippFormComponent
-              type="autoComplete"
-              label="Select User"
-              name="forwarding.ForwardInternal"
-              multiple={false}
-              options={
-                usersList?.data?.Results?.map((user) => ({
-                  value: user.userPrincipalName,
-                  label: `${user.displayName} (${user.userPrincipalName})`,
-                })) || []
-              }
-              formControl={formControl}
-            />
-          </CippFormCondition>
-
-          <CippFormCondition
-            formControl={formControl}
-            field="forwarding.forwardOption"
-            compareType="is"
-            compareValue="ExternalAddress"
-          >
-            <CippFormComponent
-              type="textField"
-              label="External Email Address"
-              name="forwarding.ForwardExternal"
-              formControl={formControl}
-            />
-          </CippFormCondition>
-
-          <CippFormComponent
-            type="switch"
-            label="Keep a Copy of the Forwarded Mail in the Source Mailbox"
-            name="forwarding.KeepCopy"
-            formControl={formControl}
-          />
-          <Grid item size={12}>
-            <CippApiResults apiObject={postRequest} />
-          </Grid>
-          <Grid>
-            <Button
-              onClick={() => handleSubmit("forwarding")}
-              variant="contained"
-              disabled={!formControl.formState.isValid || postRequest.isPending}
-            >
-              Submit
-            </Button>
-          </Grid>
-        </Stack>
+        <CippForwardingSection
+          formControl={formControl}
+          usersList={usersList}
+          postRequest={postRequest}
+          handleSubmit={handleSubmit}
+          currentSettings={currentSettings}
+        />
       ),
     },
     {
