@@ -171,10 +171,10 @@ const AppApprovalTemplateForm = ({
             <>
               <Alert severity="info">
                 App approval templates allow you to define an application with its permissions that
-                can be deployed to multiple tenants. Select a multi-tenant application and
-                permission set to create a template. If your application is not listed, check the
-                Supported account types in the App Registration properties in Entra.
+                can be deployed to multiple tenants. Select an application and permission set to
+                create a template.
               </Alert>
+
               <CippFormComponent
                 formControl={formControl}
                 name="templateName"
@@ -182,6 +182,7 @@ const AppApprovalTemplateForm = ({
                 type="textField"
                 validators={{ required: "Template name is required" }}
               />
+
               <CippFormComponent
                 formControl={formControl}
                 name="appId"
@@ -195,18 +196,10 @@ const AppApprovalTemplateForm = ({
                   valueField: "appId",
                   addedField: {
                     displayName: "displayName",
-                    signInAudience: "signInAudience",
-                  },
-                  dataFilter: (data) => {
-                    return data.filter(
-                      (item) => item.addedFields?.signInAudience === "AzureADMultipleOrgs"
-                    );
                   },
                   showRefresh: true,
                 }}
                 multiple={false}
-                creatable={false}
-                required={true}
                 validators={{ required: "Application is required" }}
               />
 
@@ -226,8 +219,6 @@ const AppApprovalTemplateForm = ({
                   showRefresh: true,
                 }}
                 multiple={false}
-                creatable={false}
-                required={true}
                 validators={{ required: "Permission Set is required" }}
               />
 

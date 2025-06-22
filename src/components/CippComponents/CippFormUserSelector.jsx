@@ -30,9 +30,7 @@ export const CippFormUserSelector = ({
         dataKey: "Results",
         labelField: (option) => `${option.displayName} (${option.userPrincipalName})`,
         valueField: valueField ? valueField : "id",
-        queryKey: `ListUsers-${currentTenant?.value ? currentTenant.value : selectedTenant}-${
-          select ? select : "default"
-        }`,
+        queryKey: `ListUsers-${currentTenant?.value ? currentTenant.value : selectedTenant}`,
         data: {
           Endpoint: "users",
           manualPagination: true,
