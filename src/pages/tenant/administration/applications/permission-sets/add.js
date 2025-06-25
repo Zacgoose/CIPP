@@ -47,6 +47,7 @@ const Page = () => {
     if (!template && !copy && !initialPermissions) {
       setInitialPermissions({
         Permissions: {},
+        AdminRoles: [],
         TemplateName: "New Permission Set",
       });
       formControl.setValue("templateName", "New Permission Set");
@@ -56,6 +57,7 @@ const Page = () => {
         const copyName = `Copy of ${templateData[0].TemplateName}`;
         setInitialPermissions({
           Permissions: templateData[0].Permissions,
+          AdminRoles: Array.isArray(templateData[0].AdminRoles) ? templateData[0].AdminRoles : [],
           TemplateName: copyName,
         });
         formControl.setValue("templateName", copyName);
@@ -66,6 +68,7 @@ const Page = () => {
         setInitialPermissions({
           TemplateId: templateData[0].TemplateId,
           Permissions: templateData[0].Permissions,
+          AdminRoles: Array.isArray(templateData[0].AdminRoles) ? templateData[0].AdminRoles : [],
           TemplateName: templateData[0].TemplateName,
         });
         formControl.setValue("templateName", templateData[0].TemplateName);
@@ -134,6 +137,7 @@ const Page = () => {
     if (selectedTemplate) {
       setInitialPermissions({
         Permissions: selectedTemplate.Permissions,
+        AdminRoles: Array.isArray(selectedTemplate.AdminRoles) ? selectedTemplate.AdminRoles : [],
         TemplateName: `Import of ${selectedTemplate.TemplateName}`,
       });
       formControl.setValue("templateName", `Import of ${selectedTemplate.TemplateName}`);
@@ -151,11 +155,11 @@ const Page = () => {
                   ? "Create a copy of an existing permission set with your own modifications."
                   : template
                   ? "Edit the permissions in this permission set."
-                  : "Create a new permission set to define a collection of application permissions."}
+                  : "Create a new permission set to define a collection of application permissions and admin roles."}
               </Typography>
               <Alert severity="info">
-                Permission sets allow you to define collections of permissions that can be applied
-                to applications consistently.
+                Permission sets allow you to define collections of API permissions and admin roles that can be applied
+                to applications consistently across your organization.
               </Alert>
 
               <CippFormComponent
@@ -198,10 +202,9 @@ const Page = () => {
               {initialPermissions && (
                 <>
                   <Alert severity="info">
-                    Choose the permissions you want to assign to this permission set. Microsoft
+                    Configure the API permissions and admin roles for this permission set. Microsoft
                     Graph is the default Service Principal added and you can choose to add
-                    additional Service Principals as needed. Note that some Service Principals do
-                    not have any published permissions to choose from.
+                    additional Service Principals as needed.
                   </Alert>
                   <CippAppPermissionBuilder
                     formControl={formControl}

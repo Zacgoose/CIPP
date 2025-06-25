@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Button,
@@ -33,6 +33,7 @@ import {
   Undo,
   Upload,
   WarningAmberOutlined,
+  Security,
 } from "@mui/icons-material";
 import { useWatch } from "react-hook-form";
 import { CippCardTabPanel } from "./CippCardTabPanel";
@@ -50,15 +51,14 @@ const CippAppPermissionBuilder = ({
   removePermissionConfirm = false,
   appDisplayName = "CIPP-SAM",
   formControl,
+  hideSubmitButton = false,
 }) => {
   const [selectedApp, setSelectedApp] = useState([]);
-  const [permissionsImported, setPermissionsImported] = useState(false);
   const [newPermissions, setNewPermissions] = useState({});
   const [importedManifest, setImportedManifest] = useState(null);
   const [manifestVisible, setManifestVisible] = useState(false);
   const [manifestError, setManifestError] = useState(false);
   const [calloutMessage, setCalloutMessage] = useState(null);
-  const [initialPermissions, setInitialPermissions] = useState();
   const [additionalPermissionsDialog, setAdditionalPermissionsDialog] = useState(false);
   const [additionalPermissions, setAdditionalPermissions] = useState([]);
   const [removePermissionDialog, setRemovePermissionDialog] = useState(false);
@@ -66,8 +66,16 @@ const CippAppPermissionBuilder = ({
   const [resetPermissionDialog, setResetPermissionDialog] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
+  // Admin Roles state - ensure it's always an array
+  const [selectedAdminRoles, setSelectedAdminRoles] = useState([]);
+  const [adminRolesExpanded, setAdminRolesExpanded] = useState(false);
+
   const handleChange = (panel) => (event, newExpanded) => {
     setExpanded(newExpanded ? panel : false);
+  };
+
+  const handleAdminRolesExpanded = () => {
+    setAdminRolesExpanded(!adminRolesExpanded);
   };
 
   const deprecatedServicePrincipals = [
@@ -77,6 +85,7 @@ const CippAppPermissionBuilder = ({
   ];
 
   const currentSelectedSp = useWatch({ control: formControl.control, name: "servicePrincipal" });
+  const currentSelectedAdminRole = useWatch({ control: formControl.control, name: "adminRole" });
 
   // Check if selected service principal is in the deprecated list
   const isDeprecatedSp =
@@ -92,6 +101,13 @@ const CippAppPermissionBuilder = ({
     url: "/api/ExecServicePrincipals",
     queryKey: "execServicePrincipalList",
     waiting: true,
+  });
+
+  // Get available directory roles from the API
+  const { data: directoryRoles, isLoading: rolesLoading } = ApiGetCall({
+    url: '/api/ListDirectoryRoles',
+    queryKey: 'directoryRoles',
+    enabled: true,
   });
 
   const removeServicePrincipal = useCallback(
@@ -138,9 +154,10 @@ const CippAppPermissionBuilder = ({
       setResetPermissionDialog(true);
     } else {
       setSelectedApp([]);
-      setPermissionsImported(false);
       setManifestVisible(false);
-      setCalloutMessage("Permissions reset to default.");
+      setSelectedAdminRoles([]); // Reset admin roles too
+      setNewPermissions({});
+      setCalloutMessage("Permissions and admin roles reset to default.");
     }
   };
 
@@ -148,6 +165,7 @@ const CippAppPermissionBuilder = ({
     if (onSubmit) {
       var postBody = {
         Permissions: newPermissions.Permissions,
+        AdminRoles: Array.isArray(selectedAdminRoles) ? selectedAdminRoles : [], // Include admin roles in submission
       };
       onSubmit(postBody);
     }
@@ -182,6 +200,24 @@ const CippAppPermissionBuilder = ({
     });
 
     setExpanded(false);
+  };
+
+  // Admin roles functions
+  const handleAddAdminRole = () => {
+    if (!currentSelectedAdminRole) return;
+
+    const roleToAdd = directoryRoles?.find(role => role.id === currentSelectedAdminRole.value);
+    const currentRoles = Array.isArray(selectedAdminRoles) ? selectedAdminRoles : [];
+    
+    if (roleToAdd && !currentRoles.find(role => role.id === roleToAdd.id)) {
+      setSelectedAdminRoles([...currentRoles, roleToAdd]);
+      formControl.setValue("adminRole", null);
+    }
+  };
+
+  const handleRemoveAdminRole = (roleId) => {
+    const currentRoles = Array.isArray(selectedAdminRoles) ? selectedAdminRoles : [];
+    setSelectedAdminRoles(currentRoles.filter(role => role.id !== roleId));
   };
 
   const generateManifest = ({ appDisplayName = "CIPP-SAM", prompt = false }) => {
@@ -313,7 +349,6 @@ const CippAppPermissionBuilder = ({
     setNewPermissions(updatedPermissions);
     setSelectedApp(selectedServicePrincipals);
     setImportedManifest(null);
-    setPermissionsImported(true);
     setManifestVisible(false);
     setCalloutMessage("Manifest imported successfully.");
   };
@@ -357,19 +392,39 @@ const CippAppPermissionBuilder = ({
   }, []);
 
   useEffect(() => {
-    if (spSuccess) {
-      try {
-        var initialAppIds = Object.keys(currentPermissions?.Permissions);
-      } catch {
-        initialAppIds = [];
-      }
+    if (spSuccess && currentPermissions) {
+      console.log("currentPermissions received:", currentPermissions);
+      
+      // If we have currentPermissions with data, use it directly
+      if (currentPermissions.Permissions && Object.keys(currentPermissions.Permissions).length > 0) {
+        const appIds = Object.keys(currentPermissions.Permissions);
+        console.log("Loading permissions for apps:", appIds);
+        
+        // Find the service principals for these app IDs
+        const newApps = servicePrincipals?.Results?.filter((sp) =>
+          appIds.includes(sp.appId)
+        )?.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-      if (selectedApp.length === 0 && initialAppIds.length === 0) {
-        var microsoftGraph = servicePrincipals?.Results?.find(
+        if (newApps && newApps.length > 0) {
+          console.log("Found service principals:", newApps.map(sp => ({ appId: sp.appId, displayName: sp.displayName })));
+          
+          setSelectedApp(newApps);
+          setNewPermissions(currentPermissions);
+          setSelectedAdminRoles(Array.isArray(currentPermissions.AdminRoles) ? currentPermissions.AdminRoles : []);
+          
+          // Expand the first app by default
+          if (newApps.length === 1) {
+            setExpanded(newApps[0].appId);
+          }
+        }
+      } 
+      // If no permissions provided, initialize with Microsoft Graph only
+      else if (selectedApp.length === 0) {
+        const microsoftGraph = servicePrincipals?.Results?.find(
           (sp) => sp?.appId === "00000003-0000-0000-c000-000000000000"
         );
         if (microsoftGraph) {
-          setSelectedApp([microsoftGraph]); // Ensure this does not trigger a loop
+          setSelectedApp([microsoftGraph]);
           setNewPermissions({
             Permissions: {
               "00000003-0000-0000-c000-000000000000": {
@@ -378,40 +433,12 @@ const CippAppPermissionBuilder = ({
               },
             },
           });
-          setExpanded("00000003-0000-0000-c000-000000000000"); // Automatically expand Microsoft Graph
-        }
-      } else if (!_.isEqual(currentPermissions, initialPermissions)) {
-        setSelectedApp([]); // Avoid redundant updates
-        setNewPermissions(currentPermissions);
-        setInitialPermissions(currentPermissions);
-        setPermissionsImported(false);
-      } else if (initialAppIds.length > 0 && !permissionsImported) {
-        const newApps = servicePrincipals?.Results?.filter((sp) =>
-          initialAppIds.includes(sp.appId)
-        )?.sort((a, b) => a.displayName.localeCompare(b.displayName));
-
-        if (!_.isEqual(selectedApp, newApps)) {
-          setSelectedApp(newApps); // Prevent unnecessary updates
-        }
-
-        setNewPermissions(currentPermissions);
-        setInitialPermissions(currentPermissions);
-        setPermissionsImported(true);
-
-        // Automatically expand if only one service principal exists
-        if (newApps.length === 1) {
-          setExpanded(newApps[0].appId);
+          setSelectedAdminRoles([]);
+          setExpanded("00000003-0000-0000-c000-000000000000");
         }
       }
     }
-  }, [
-    currentPermissions,
-    initialPermissions,
-    permissionsImported,
-    selectedApp,
-    servicePrincipals,
-    spSuccess,
-  ]);
+  }, [currentPermissions, servicePrincipals, spSuccess]);
 
   const getPermissionCounts = (appId) => {
     var appRoles = newPermissions?.Permissions[appId]?.applicationPermissions;
@@ -420,6 +447,14 @@ const CippAppPermissionBuilder = ({
     var counts = `${appRoles?.length ?? 0}/${delegatedPermissions?.length ?? 0}`;
     return counts;
   };
+
+  const adminRoleTableData = Array.isArray(selectedAdminRoles) 
+    ? selectedAdminRoles.map(role => ({
+        id: role.id,
+        displayName: role.displayName,
+        description: role.description || 'Azure AD administrative role'
+      }))
+    : [];
 
   const ApiPermissionRow = ({ servicePrincipal = null, spPermissions, formControl }) => {
     const [value, setValue] = useState(0);
@@ -437,8 +472,6 @@ const CippAppPermissionBuilder = ({
       queryKey: `execServicePrincipals-${servicePrincipal.id}`,
       waiting: true,
     });
-
-    //console.log(spInfo);
 
     const currentAppPermission = useWatch({
       control: formControl.control,
@@ -996,6 +1029,120 @@ const CippAppPermissionBuilder = ({
                   </Grid>
                 )}
 
+              {/* Admin Roles Accordion - Updated to match API permissions styling */}
+              <Box sx={{ mt: 3 }}>
+                <Accordion
+                  expanded={adminRolesExpanded}
+                  variant="outlined"
+                  onChange={handleAdminRolesExpanded}
+                >
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      justifyContent="space-between"
+                      alignItems="center"
+                      sx={{ width: "100%", mr: 1 }}
+                    >
+                      <Typography variant="h6">Admin Role Assignments</Typography>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Chip
+                          color="secondary"
+                          variant="outlined"
+                          size="small"
+                          label={Array.isArray(selectedAdminRoles) ? selectedAdminRoles.length : 0}
+                          sx={{ width: "60px" }}
+                          icon={
+                            <SvgIcon fontSize="small">
+                              <Security />
+                            </SvgIcon>
+                          }
+                        />
+                      </Stack>
+                    </Stack>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Stack spacing={3}>
+                      <Typography variant="body2" color="textSecondary">
+                        Configure administrative roles for {appDisplayName}. Admin roles will be assigned to the service principal when deployed.
+                      </Typography>
+                      
+                      <Alert severity="info">
+                        Only assign the minimum roles required for the application to function properly. These roles will be applied automatically during deployment.
+                      </Alert>
+
+                      {/* Add Role Section - matching API permissions style */}
+                      <Grid container spacing={2} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Grid size={{ xl: 8, xs: 12 }}>
+                          <CippFormComponent
+                            type="autoComplete"
+                            label="Admin Roles"
+                            name="adminRole"
+                            isFetching={rolesLoading}
+                            options={(directoryRoles || [])
+                              .filter(role => {
+                                const currentRoles = Array.isArray(selectedAdminRoles) ? selectedAdminRoles : [];
+                                return !currentRoles.find(selected => selected.id === role.id);
+                              })
+                              .map((role) => ({
+                                label: role.displayName,
+                                value: role.id,
+                              }))}
+                            formControl={formControl}
+                            multiple={false}
+                          />
+                        </Grid>
+                        <Grid>
+                          <Tooltip title="Add Admin Role">
+                            <div onClick={handleAddAdminRole}>
+                              <Button
+                                variant="outlined"
+                                disabled={!currentSelectedAdminRole || rolesLoading}
+                              >
+                                <SvgIcon fontSize="small">
+                                  <PlusIcon />
+                                </SvgIcon>
+                              </Button>
+                            </div>
+                          </Tooltip>
+                        </Grid>
+                      </Grid>
+
+                      {/* Selected Roles Table - matching API permissions style */}
+                      <CippDataTable
+                        title={`Selected Admin Roles (${Array.isArray(selectedAdminRoles) ? selectedAdminRoles.length : 0})`}
+                        noCard={true}
+                        data={adminRoleTableData}
+                        simpleColumns={['displayName', 'description']}
+                        actions={[
+                          {
+                            label: 'Remove Role',
+                            icon: <Delete />,
+                            noConfirm: true,
+                            customFunction: (row) => handleRemoveAdminRole(row.id),
+                          },
+                        ]}
+                        isFetching={rolesLoading}
+                      />
+
+                      {(!Array.isArray(selectedAdminRoles) || selectedAdminRoles.length === 0) && (
+                        <Alert severity="warning">
+                          No admin roles selected. The service principal will only have the permissions 
+                          granted through API permissions.
+                        </Alert>
+                      )}
+
+                      {Array.isArray(selectedAdminRoles) && selectedAdminRoles.length > 0 && (
+                        <Alert severity="success">
+                          {selectedAdminRoles.length} admin role{selectedAdminRoles.length !== 1 ? 's' : ''} will be assigned 
+                          to the service principal when deployed.
+                        </Alert>
+                      )}
+                    </Stack>
+                  </AccordionDetails>
+                </Accordion>
+              </Box>
+
               <Box sx={{ mt: 3 }}>
                 {selectedApp &&
                   selectedApp?.length > 0 &&
@@ -1092,23 +1239,25 @@ const CippAppPermissionBuilder = ({
             </Grid>
           </Grid>
 
-          <Grid container sx={{ display: "flex", alignItems: "center" }}>
-            <Grid size={{ xl: 1, xs: 12 }}>
-              <Button
-                variant="contained"
-                startIcon={
-                  <SvgIcon fontSize="small">
-                    <Save />
-                  </SvgIcon>
-                }
-                type="submit"
-                disabled={updatePermissions.isPending}
-                onClick={handleSubmit}
-              >
-                Save
-              </Button>
+          {!hideSubmitButton && (
+            <Grid container sx={{ display: "flex", alignItems: "center" }}>
+              <Grid size={{ xl: 1, xs: 12 }}>
+                <Button
+                  variant="contained"
+                  startIcon={
+                    <SvgIcon fontSize="small">
+                      <Save />
+                    </SvgIcon>
+                  }
+                  type="submit"
+                  disabled={updatePermissions.isPending}
+                  onClick={handleSubmit}
+                >
+                  Save
+                </Button>
+              </Grid>
             </Grid>
-          </Grid>
+          )}
         </>
       )}
       <ConfirmationDialog
@@ -1127,7 +1276,7 @@ const CippAppPermissionBuilder = ({
       <ConfirmationDialog
         open={resetPermissionDialog}
         title="Reset Permissions"
-        message="Are you sure you want to reset the permissions?"
+        message="Are you sure you want to reset the permissions and admin roles?"
         onConfirm={() => {
           confirmReset(true);
           setResetPermissionDialog(false);

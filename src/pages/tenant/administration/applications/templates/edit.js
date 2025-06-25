@@ -19,7 +19,7 @@ const Page = () => {
     mode: "onBlur",
   });
 
-  const { data: templateData, isLoading } = ApiGetCall({
+  const { data: templateData, isLoading, refetch } = ApiGetCall({
     url: template ? `/api/ExecAppApprovalTemplate?Action=Get&TemplateId=${template}` : null,
     queryKey: template ? ["ExecAppApprovalTemplateList", template, refetchKey] : null,
     enabled: !!template,
@@ -51,6 +51,9 @@ const Page = () => {
 
           // Refresh the data
           setRefetchKey((prev) => prev + 1);
+
+          // Explicitly refetch the data
+          refetch();
         },
       }
     );

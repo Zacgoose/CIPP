@@ -1,9 +1,16 @@
-import { useState, useEffect } from "react";
-import { Alert, Skeleton, Stack, Typography, Button, Box } from "@mui/material";
-import { CippFormComponent } from "./CippFormComponent";
-import { CippApiResults } from "./CippApiResults";
-import { Grid } from "@mui/system";
-import CippPermissionPreview from "./CippPermissionPreview";
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Skeleton,
+  Stack,
+  Typography,
+  Divider,
+} from '@mui/material';
+import { CippFormComponent } from '/src/components/CippComponents/CippFormComponent';
+import CippAppPermissionBuilder from '/src/components/CippComponents/CippAppPermissionBuilder';
+import { ApiGetCall } from '/src/api/ApiCall';
 
 const AppApprovalTemplateForm = ({
   formControl,
@@ -13,249 +20,236 @@ const AppApprovalTemplateForm = ({
   isCopy,
   updatePermissions,
   onSubmit,
-  refetchKey,
+  refetchKey
 }) => {
-  const [selectedPermissionSet, setSelectedPermissionSet] = useState(null);
-  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const [initialPermissions, setInitialPermissions] = useState(null);
+  const [availableTemplates, setAvailableTemplates] = useState([]);
 
-  // When templateData changes, update the form
+  // Get all available permission set templates
+  const { data: permissionSets, isLoading: permissionSetsLoading } = ApiGetCall({
+    url: '/api/ExecAppPermissionTemplate',
+    queryKey: 'execAppPermissionTemplate',
+  });
+
+  // Get all available app approval templates for importing
+  const { data: allTemplates, isLoading: templatesLoading } = ApiGetCall({
+    url: '/api/ListAppApprovalTemplates',
+    queryKey: 'listAppApprovalTemplates',
+  });
+
   useEffect(() => {
-    if (!isEditing && !isCopy) {
-      formControl.setValue("templateName", "New App Deployment Template");
-      formControl.setValue("appType", "EnterpriseApp");
-      setPermissionsLoaded(false);
-    } else if (templateData && isCopy) {
-      // When copying, we want to load the template data but not the ID
+    if (allTemplates && allTemplates.length > 0) {
+      setAvailableTemplates(allTemplates);
+    }
+  }, [allTemplates]);
+
+  useEffect(() => {
+    if (!isEditing && !isCopy && !initialPermissions) {
+      // Initialize with empty structure for new templates
+      setInitialPermissions({
+        Permissions: {},
+        AdminRoles: [],
+        TemplateName: 'New App Approval Template',
+      });
+      formControl.setValue('templateName', 'New App Approval Template');
+    } else if (templateData && (isCopy || isEditing) && !initialPermissions) {
+      // For editing or copying
       if (templateData[0]) {
-        const copyName = `Copy of ${templateData[0].TemplateName}`;
-        formControl.setValue("templateName", copyName);
-        formControl.setValue("appId", {
-          label: `${templateData[0].AppName || "Unknown"} (${templateData[0].AppId})`,
-          value: templateData[0].AppId,
-          addedFields: {
-            displayName: templateData[0].AppName,
-          },
+        const templateName = isCopy 
+          ? `Copy of ${templateData[0].TemplateName}` 
+          : templateData[0].TemplateName;
+        
+        setInitialPermissions({
+          TemplateId: isCopy ? undefined : templateData[0].TemplateId,
+          Permissions: templateData[0].Permissions || {},
+          AdminRoles: templateData[0].AdminRoles || [],
+          TemplateName: templateName,
+          AppId: templateData[0].AppId,
+          AppName: templateData[0].AppName,
         });
-
-        // Set permission set and trigger loading of permissions
-        const permissionSetValue = {
-          label: templateData[0].PermissionSetName || "Custom Permissions",
-          value: templateData[0].PermissionSetId,
-          addedFields: {
-            Permissions: templateData[0].Permissions || {},
-          },
-        };
-
-        formControl.setValue("permissionSetId", permissionSetValue);
-        setSelectedPermissionSet(permissionSetValue);
-        setPermissionsLoaded(true);
-      }
-    } else if (templateData) {
-      // For editing, load all template data
-      if (templateData[0]) {
-        formControl.setValue("templateName", templateData[0].TemplateName);
-        formControl.setValue("appId", {
-          label: `${templateData[0].AppName || "Unknown"} (${templateData[0].AppId})`,
-          value: templateData[0].AppId,
-          addedFields: {
-            displayName: templateData[0].AppName,
-          },
-        });
-
-        // Set permission set and trigger loading of permissions
-        const permissionSetValue = {
-          label: templateData[0].PermissionSetName || "Custom Permissions",
-          value: templateData[0].PermissionSetId,
-          addedFields: {
-            Permissions: templateData[0].Permissions || {},
-          },
-        };
-
-        formControl.setValue("permissionSetId", permissionSetValue);
-        setSelectedPermissionSet(permissionSetValue);
-        setPermissionsLoaded(true);
+        
+        formControl.setValue('templateName', templateName);
+        formControl.setValue('appId', templateData[0].AppId || '');
+        formControl.setValue('appName', templateData[0].AppName || '');
+        
+        // Set permission set if it exists
+        if (templateData[0].PermissionSetId) {
+          formControl.setValue('permissionSet', {
+            label: templateData[0].PermissionSetName,
+            value: templateData[0].PermissionSetId
+          });
+        }
       }
     }
   }, [templateData, isCopy, isEditing, formControl]);
 
-  // Watch for app selection changes to update template name
-  const selectedApp = formControl.watch("appId");
+  const handleImportTemplate = () => {
+    const importTemplate = formControl.getValues('importTemplate');
+    if (!importTemplate) return;
 
-  useEffect(() => {
-    // Update template name when app is selected if we're in add mode and name hasn't been manually changed
-    if (selectedApp && !isEditing && !isCopy) {
-      const currentName = formControl.getValues("templateName");
-      // Only update if it's still the default or empty
-      if (currentName === "New App Deployment Template" || !currentName) {
-        // Extract app name from the label (format is usually "AppName (AppId)")
-        const appName = selectedApp.label.split(" (")[0];
-        if (appName) {
-          formControl.setValue("templateName", `${appName} Template`);
-        }
-      }
-    }
-  }, [selectedApp, isEditing, isCopy, formControl]);
-
-  // Watch for permission set selection changes
-  const selectedPermissionSetValue = formControl.watch("permissionSetId");
-
-  useEffect(() => {
-    if (selectedPermissionSetValue?.value) {
-      setSelectedPermissionSet(selectedPermissionSetValue);
-      setPermissionsLoaded(true);
-    } else {
-      setSelectedPermissionSet(null);
-      setPermissionsLoaded(false);
-    }
-  }, [selectedPermissionSetValue]);
-
-  // Handle initial data loading for editing and copying
-  useEffect(() => {
-    // When editing or copying, ensure permission data is properly loaded
-    if (isEditing || isCopy) {
-      if (templateData?.[0]?.Permissions) {
-        // Ensure permissions are immediately available for the preview
-        setPermissionsLoaded(true);
-      }
-    }
-  }, [isEditing, isCopy, templateData]);
-
-  // Handle form submission
-  const handleSubmit = (data) => {
-    const appDisplayName =
-      data.appId?.addedFields?.displayName ||
-      (data.appId?.label ? data.appId.label.split(" (")[0] : undefined);
-
-    const payload = {
-      TemplateName: data.templateName,
-      AppId: data.appId?.value,
-      AppName: appDisplayName,
-      PermissionSetId: data.permissionSetId?.value,
-      PermissionSetName: data.permissionSetId?.label,
-      Permissions: data.permissionSetId?.addedFields?.Permissions,
-    };
-
-    if (isEditing && !isCopy && templateData?.[0]?.TemplateId) {
-      payload.TemplateId = templateData[0].TemplateId;
-    }
-
-    // Store values before submission to set them back afterward
-    const currentValues = {
-      templateName: data.templateName,
-      appId: data.appId,
-      permissionSetId: data.permissionSetId,
-    };
-
-    onSubmit(payload);
-
-    // After submission, set the values back to what they were but mark as clean
-    // This will only apply to add page, as edit will get refreshed data
-    if (!isEditing) {
-      setTimeout(() => {
-        formControl.setValue("templateName", currentValues.templateName, { shouldDirty: false });
-        formControl.setValue("appId", currentValues.appId, { shouldDirty: false });
-        formControl.setValue("permissionSetId", currentValues.permissionSetId, {
-          shouldDirty: false,
+    const selectedTemplate = availableTemplates.find((t) => t.TemplateId === importTemplate.value);
+    if (selectedTemplate) {
+      setInitialPermissions({
+        Permissions: selectedTemplate.Permissions || {},
+        AdminRoles: selectedTemplate.AdminRoles || [],
+        TemplateName: `Import of ${selectedTemplate.TemplateName}`,
+        AppId: selectedTemplate.AppId,
+        AppName: selectedTemplate.AppName,
+      });
+      
+      formControl.setValue('templateName', `Import of ${selectedTemplate.TemplateName}`);
+      formControl.setValue('appId', selectedTemplate.AppId || '');
+      formControl.setValue('appName', selectedTemplate.AppName || '');
+      
+      if (selectedTemplate.PermissionSetId) {
+        formControl.setValue('permissionSet', {
+          label: selectedTemplate.PermissionSetName,
+          value: selectedTemplate.PermissionSetId
         });
-      }, 100);
+      }
     }
   };
 
+  const handleFormSubmit = (permissionData) => {
+    const formData = formControl.getValues();
+    
+    const payload = {
+      ...permissionData, // This now includes both Permissions and AdminRoles from the integrated builder
+      TemplateName: formData.templateName,
+      AppId: formData.appId,
+      AppName: formData.appName,
+      PermissionSetId: formData.permissionSet?.value,
+      PermissionSetName: formData.permissionSet?.label,
+    };
+
+    if (isEditing && !isCopy) {
+      payload.TemplateId = templateData[0].TemplateId;
+    }
+
+    onSubmit(payload);
+  };
+
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
-      <Grid size={{ xs: 12, sm: 6 }}>
-        <Stack spacing={2}>
-          <Typography variant="h6">App Approval Template Details</Typography>
-          {templateLoading && <Skeleton variant="rectangular" height={300} />}
-          {(!templateLoading || !isEditing) && (
-            <>
-              <Alert severity="info">
-                App approval templates allow you to define an application with its permissions that
-                can be deployed to multiple tenants. Select a multi-tenant application and
-                permission set to create a template. If your application is not listed, check the
-                Supported account types in the App Registration properties in Entra.
-              </Alert>
+    <Stack spacing={3}>
+      {templateLoading && (
+        <Skeleton variant="rectangular" width="100%" height={200} animation="wave" />
+      )}
+      
+      {!templateLoading && (
+        <>
+          <Typography variant="body2">
+            {isCopy
+              ? 'Create a copy of an existing app approval template with your own modifications.'
+              : isEditing
+              ? 'Edit this app approval template. Changes will affect future deployments.'
+              : 'Create a new app approval template to standardize application deployments.'}
+          </Typography>
+
+          <Alert severity="info">
+            App approval templates combine application registration, permission sets, and admin role 
+            assignments for consistent multi-tenant deployments.
+          </Alert>
+
+          {/* Basic Template Information */}
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Template Information
+            </Typography>
+            <Stack spacing={2}>
               <CippFormComponent
                 formControl={formControl}
                 name="templateName"
                 label="Template Name"
                 type="textField"
-                validators={{ required: "Template name is required" }}
+                required={true}
+                validators={{ required: 'Template name is required' }}
               />
+
               <CippFormComponent
                 formControl={formControl}
                 name="appId"
-                label="Select Application"
-                type="autoComplete"
-                api={{
-                  url: "/api/ExecServicePrincipals",
-                  queryKey: "execServicePrincipals",
-                  dataKey: "Results",
-                  labelField: (item) => `${item.displayName} (${item.appId})`,
-                  valueField: "appId",
-                  addedField: {
-                    displayName: "displayName",
-                    signInAudience: "signInAudience",
-                  },
-                  dataFilter: (data) => {
-                    return data.filter(
-                      (item) => item.addedFields?.signInAudience === "AzureADMultipleOrgs"
-                    );
-                  },
-                  showRefresh: true,
-                }}
-                multiple={false}
-                creatable={false}
+                label="Application ID"
+                type="textField"
                 required={true}
-                validators={{ required: "Application is required" }}
+                validators={{ required: 'Application ID is required' }}
               />
 
               <CippFormComponent
                 formControl={formControl}
-                name="permissionSetId"
-                label="Select Permission Set"
-                type="autoComplete"
-                api={{
-                  url: "/api/ExecAppPermissionTemplate",
-                  queryKey: "execAppPermissionTemplate",
-                  labelField: (item) => item.TemplateName,
-                  valueField: "TemplateId",
-                  addedField: {
-                    Permissions: "Permissions",
-                  },
-                  showRefresh: true,
-                }}
-                multiple={false}
-                creatable={false}
+                name="appName"
+                label="Application Name"
+                type="textField"
                 required={true}
-                validators={{ required: "Permission Set is required" }}
+                validators={{ required: 'Application name is required' }}
               />
 
-              <Stack spacing={2} sx={{ mt: 2 }}>
-                <Box>
+              <CippFormComponent
+                formControl={formControl}
+                name="permissionSet"
+                label="Permission Set (Optional)"
+                placeholder="Select a permission set to include"
+                type="autoComplete"
+                options={permissionSets?.map((set) => ({
+                  label: set.TemplateName,
+                  value: set.TemplateId,
+                })) || []}
+                isFetching={permissionSetsLoading}
+                multiple={false}
+              />
+
+              {!isEditing && !isCopy && (
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Box sx={{ flexGrow: 1 }}>
+                    <CippFormComponent
+                      formControl={formControl}
+                      name="importTemplate"
+                      label="Import from Existing Template (Optional)"
+                      placeholder="Select a template to import"
+                      type="autoComplete"
+                      options={availableTemplates.map((template) => ({
+                        label: template.TemplateName,
+                        value: template.TemplateId,
+                      }))}
+                      isFetching={templatesLoading}
+                      multiple={false}
+                    />
+                  </Box>
                   <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={formControl.handleSubmit(handleSubmit)}
-                    disabled={updatePermissions.isPending}
+                    variant="outlined"
+                    onClick={handleImportTemplate}
+                    disabled={!formControl.watch('importTemplate')}
                   >
-                    {isEditing ? "Update Template" : "Create Template"}
+                    Import
                   </Button>
-                </Box>
-                <CippApiResults apiObject={updatePermissions} />
-              </Stack>
+                </Stack>
+              )}
+            </Stack>
+          </Box>
+
+          <Divider />
+
+          {initialPermissions && (
+            <>
+              <Alert severity="info">
+                Configure the API permissions and admin roles that will be applied when this template is deployed.
+                The integrated permission builder allows you to manage both API permissions and admin role assignments in one place.
+              </Alert>
+
+              {/* Integrated API Permissions and Admin Roles */}
+              <CippAppPermissionBuilder
+                formControl={formControl}
+                currentPermissions={initialPermissions}
+                onSubmit={handleFormSubmit}
+                updatePermissions={updatePermissions}
+                removePermissionConfirm={true}
+                appDisplayName={formControl.watch('templateName') || initialPermissions.TemplateName}
+                key={`template-builder-${refetchKey}`}
+              />
             </>
           )}
-        </Stack>
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6 }}>
-        <CippPermissionPreview
-          permissions={selectedPermissionSet?.addedFields?.Permissions}
-          isLoading={templateLoading}
-          title="Permission Preview"
-        />
-      </Grid>
-    </Grid>
+        </>
+      )}
+    </Stack>
   );
 };
 

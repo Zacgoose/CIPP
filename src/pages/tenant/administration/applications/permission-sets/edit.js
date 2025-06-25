@@ -4,10 +4,9 @@ import { useForm } from "react-hook-form";
 import { ApiGetCall, ApiPostCall } from "../../../../../api/ApiCall";
 import CippAppPermissionBuilder from "/src/components/CippComponents/CippAppPermissionBuilder";
 import CippPageCard from "/src/components/CippCards/CippPageCard";
-import { Alert, CardContent, Skeleton, Stack, Typography } from "@mui/material";
+import { Alert, CardContent, Skeleton, Stack, Typography, Button } from "@mui/material";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@mui/material";
 import { CippFormComponent } from "/src/components/CippComponents/CippFormComponent";
 
 const Page = () => {
@@ -43,6 +42,7 @@ const Page = () => {
       setInitialPermissions({
         TemplateId: templateData[0].TemplateId,
         Permissions: templateData[0].Permissions,
+        AdminRoles: Array.isArray(templateData[0].AdminRoles) ? templateData[0].AdminRoles : [],
         TemplateName: templateData[0].TemplateName,
       });
       formControl.setValue("templateName", templateData[0].TemplateName, {
@@ -115,12 +115,12 @@ const Page = () => {
           {!isFetching && initialPermissions && (
             <>
               <Typography variant="body2">
-                Modify the permissions in this permission set. Any changes will affect all
+                Modify the API permissions and admin roles in this permission set. Any changes will affect all
                 applications using this permission set.
               </Typography>
               <Alert severity="info">
-                Permission sets allow you to define collections of permissions that can be applied
-                to applications consistently.
+                Permission sets allow you to define collections of API permissions and admin roles that can be applied
+                to applications consistently across your organization.
               </Alert>
 
               <CippFormComponent
@@ -133,10 +133,9 @@ const Page = () => {
               />
 
               <Alert severity="info">
-                Choose the permissions you want to assign to this permission set. Microsoft Graph is
+                Configure the API permissions and admin roles for this permission set. Microsoft Graph is
                 the default Service Principal added and you can choose to add additional Service
-                Principals as needed. Note that some Service Principals do not have any published
-                permissions to choose from.
+                Principals as needed.
               </Alert>
 
               <CippAppPermissionBuilder
