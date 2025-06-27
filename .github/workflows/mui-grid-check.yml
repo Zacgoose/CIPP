@@ -33,54 +33,61 @@ jobs:
           
           // Patterns to detect deprecated Grid usage
           const deprecatedPatterns = [
-            // Multi-line and single-line Grid imports from @mui/material/Grid
+            // Default Grid import from @mui/material/Grid
             {
-              pattern: /import\s+[\s\S]*?Grid[\s\S]*?\s+from\s+['"]@mui\/material\/Grid['"];?/g,
+              pattern: /import\s+Grid\s+from\s+['"]@mui\/material\/Grid['"];?/g,
               message: '❌ Deprecated Grid import from @mui/material/Grid',
               suggestion: 'Use: import Grid from "@mui/system"',
               category: 'import'
             },
-            // Multi-line and single-line Unstable_Grid2 imports
+            // Default Grid import from @mui/material/Unstable_Grid2
             {
-              pattern: /import\s+[\s\S]*?Grid[\s\S]*?\s+from\s+['"]@mui\/material\/Unstable_Grid2['"];?/g,
+              pattern: /import\s+Grid\s+from\s+['"]@mui\/material\/Unstable_Grid2['"];?/g,
               message: '❌ Deprecated Unstable_Grid2 import',
               suggestion: 'Use: import Grid from "@mui/system"',
               category: 'import'
             },
-            // Multi-line Grid imports from @mui/material barrel
+            // Named Grid import from @mui/material (single or multi-line)
             {
-              pattern: /import\s*{\s*[\s\S]*?Grid[\s\S]*?}\s*from\s+['"]@mui\/material['"];?/g,
+              pattern: /import\s*\{[\s\S]*?\bGrid\b[\s\S]*?\}\s*from\s+['"]@mui\/material['"];?/g,
               message: '❌ Deprecated Grid import from @mui/material barrel',
               suggestion: 'Use: import { Grid } from "@mui/system"',
               category: 'import'
             },
-            // Deprecated JSX props
+            // Grid alias import like "Unstable_Grid2 as Grid" from @mui/material
             {
-              pattern: /<Grid\s+[^>]*\bxs\s*=\s*{?\d+}?[^>]*>/g,
+              pattern: /import\s*\{[\s\S]*?\bUnstable_Grid2\s+as\s+Grid\b[\s\S]*?\}\s*from\s+['"]@mui\/material['"];?/g,
+              message: '❌ Deprecated Unstable_Grid2 as Grid import',
+              suggestion: 'Use: import Grid from "@mui/system"',
+              category: 'import'
+            },
+            // JSX prop patterns
+            {
+              pattern: /<Grid\s+[^>]*\bxs\s*=\s*\{?\d+\}?[^>]*>/g,
               message: '❌ Deprecated xs prop usage',
               suggestion: 'Use: size={{ xs: 12 }} instead of xs={12}',
               category: 'prop'
             },
             {
-              pattern: /<Grid\s+[^>]*\bsm\s*=\s*{?\d+}?[^>]*>/g,
+              pattern: /<Grid\s+[^>]*\bsm\s*=\s*\{?\d+\}?[^>]*>/g,
               message: '❌ Deprecated sm prop usage',
               suggestion: 'Use: size={{ sm: 6 }} instead of sm={6}',
               category: 'prop'
             },
             {
-              pattern: /<Grid\s+[^>]*\bmd\s*=\s*{?\d+}?[^>]*>/g,
+              pattern: /<Grid\s+[^>]*\bmd\s*=\s*\{?\d+\}?[^>]*>/g,
               message: '❌ Deprecated md prop usage',
               suggestion: 'Use: size={{ md: 8 }} instead of md={8}',
               category: 'prop'
             },
             {
-              pattern: /<Grid\s+[^>]*\blg\s*=\s*{?\d+}?[^>]*>/g,
+              pattern: /<Grid\s+[^>]*\blg\s*=\s*\{?\d+\}?[^>]*>/g,
               message: '❌ Deprecated lg prop usage',
               suggestion: 'Use: size={{ lg: 10 }} instead of lg={10}',
               category: 'prop'
             },
             {
-              pattern: /<Grid\s+[^>]*\bxl\s*=\s*{?\d+}?[^>]*>/g,
+              pattern: /<Grid\s+[^>]*\bxl\s*=\s*\{?\d+\}?[^>]*>/g,
               message: '❌ Deprecated xl prop usage',
               suggestion: 'Use: size={{ xl: 12 }} instead of xl={12}',
               category: 'prop'
