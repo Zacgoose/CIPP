@@ -22,69 +22,80 @@ jobs:
         with:
           node-version: '18'
 
-
-
       - name: Create Grid deprecation detection script
         run: |
           cat > detect-grid-issues.js << 'EOF'
           const fs = require('fs');
           const path = require('path');
-          const { execSync } = require('child_process');
 
           // File extensions to check
           const extensions = ['.tsx', '.ts', '.jsx', '.js'];
           
-          // Patterns to detect
+          // Patterns to detect deprecated Grid usage
           const deprecatedPatterns = [
+            // Multi-line and single-line Grid imports from @mui/material/Grid
             {
-              pattern: /import\s+.*Grid.*\s+from\s+['"]@mui\/material\/Grid['"];?/g,
+              pattern: /import\s+[\s\S]*?Grid[\s\S]*?\s+from\s+['"]@mui\/material\/Grid['"];?/g,
               message: '❌ Deprecated Grid import from @mui/material/Grid',
-              suggestion: 'Use: import Grid from "@mui/system"'
+              suggestion: 'Use: import Grid from "@mui/system"',
+              category: 'import'
             },
+            // Multi-line and single-line Unstable_Grid2 imports
             {
-              pattern: /import\s+.*Grid.*\s+from\s+['"]@mui\/material\/Unstable_Grid2['"];?/g,
+              pattern: /import\s+[\s\S]*?Grid[\s\S]*?\s+from\s+['"]@mui\/material\/Unstable_Grid2['"];?/g,
               message: '❌ Deprecated Unstable_Grid2 import',
-              suggestion: 'Use: import Grid from "@mui/system"'
+              suggestion: 'Use: import Grid from "@mui/system"',
+              category: 'import'
             },
+            // Multi-line Grid imports from @mui/material barrel
             {
-              pattern: /import\s*{\s*Grid\s*}\s*from\s+['"]@mui\/material['"];?/g,
+              pattern: /import\s*{\s*[\s\S]*?Grid[\s\S]*?}\s*from\s+['"]@mui\/material['"];?/g,
               message: '❌ Deprecated Grid import from @mui/material barrel',
-              suggestion: 'Use: import { Grid } from "@mui/system"'
+              suggestion: 'Use: import { Grid } from "@mui/system"',
+              category: 'import'
             },
+            // Deprecated JSX props
             {
               pattern: /<Grid\s+[^>]*\bxs\s*=\s*{?\d+}?[^>]*>/g,
               message: '❌ Deprecated xs prop usage',
-              suggestion: 'Use: size={{ xs: 12 }} instead of xs={12}'
+              suggestion: 'Use: size={{ xs: 12 }} instead of xs={12}',
+              category: 'prop'
             },
             {
               pattern: /<Grid\s+[^>]*\bsm\s*=\s*{?\d+}?[^>]*>/g,
               message: '❌ Deprecated sm prop usage',
-              suggestion: 'Use: size={{ sm: 6 }} instead of sm={6}'
+              suggestion: 'Use: size={{ sm: 6 }} instead of sm={6}',
+              category: 'prop'
             },
             {
               pattern: /<Grid\s+[^>]*\bmd\s*=\s*{?\d+}?[^>]*>/g,
               message: '❌ Deprecated md prop usage',
-              suggestion: 'Use: size={{ md: 8 }} instead of md={8}'
+              suggestion: 'Use: size={{ md: 8 }} instead of md={8}',
+              category: 'prop'
             },
             {
               pattern: /<Grid\s+[^>]*\blg\s*=\s*{?\d+}?[^>]*>/g,
               message: '❌ Deprecated lg prop usage',
-              suggestion: 'Use: size={{ lg: 10 }} instead of lg={10}'
+              suggestion: 'Use: size={{ lg: 10 }} instead of lg={10}',
+              category: 'prop'
             },
             {
               pattern: /<Grid\s+[^>]*\bxl\s*=\s*{?\d+}?[^>]*>/g,
               message: '❌ Deprecated xl prop usage',
-              suggestion: 'Use: size={{ xl: 12 }} instead of xl={12}'
+              suggestion: 'Use: size={{ xl: 12 }} instead of xl={12}',
+              category: 'prop'
             },
             {
               pattern: /<Grid\s+[^>]*\bitem\b[^>]*>/g,
               message: '❌ Deprecated item prop',
-              suggestion: 'Remove the "item" prop - it\'s no longer needed in Grid v2'
+              suggestion: 'Remove the "item" prop - it\'s no longer needed',
+              category: 'prop'
             },
             {
               pattern: /<Grid\s+[^>]*\bzeroMinWidth\b[^>]*>/g,
               message: '❌ Deprecated zeroMinWidth prop',
-              suggestion: 'Remove the "zeroMinWidth" prop - it\'s no longer needed in Grid v2'
+              suggestion: 'Remove the "zeroMinWidth" prop - it\'s no longer needed',
+              category: 'prop'
             }
           ];
 
@@ -109,7 +120,7 @@ jobs:
             const content = fs.readFileSync(filePath, 'utf8');
             const issues = [];
             
-            deprecatedPatterns.forEach(({ pattern, message, suggestion }) => {
+            deprecatedPatterns.forEach(({ pattern, message, suggestion, category }) => {
               const matches = [...content.matchAll(pattern)];
               matches.forEach(match => {
                 const lines = content.substring(0, match.index).split('\n');
@@ -122,6 +133,7 @@ jobs:
                   column: columnNumber,
                   message,
                   suggestion,
+                  category,
                   code: match[0].trim()
                 });
               });
@@ -134,6 +146,7 @@ jobs:
           const allFiles = getAllFiles('./');
           let totalIssues = 0;
           let hasDeprecations = false;
+          let allIssues = [];
 
           console.log('🔍 Scanning for MUI Grid deprecations...\n');
 
@@ -147,6 +160,7 @@ jobs:
                 console.log(`     Code: ${issue.code}`);
                 console.log(`     💡 ${issue.suggestion}\n`);
                 totalIssues++;
+                allIssues.push(issue);
               });
             }
           });
@@ -154,12 +168,12 @@ jobs:
           if (hasDeprecations) {
             console.log(`❌ Found ${totalIssues} deprecated Grid usage(s) across ${allFiles.filter(file => detectDeprecations(file).length > 0).length} file(s)`);
             console.log('\n📖 Migration Resources:');
-            console.log('   • Grid v2 Migration Guide: https://mui.com/material-ui/migration/upgrade-to-grid-v2/');
-            console.log('   • MUI v6 Migration: https://mui.com/material-ui/migration/upgrade-to-v6/');
-            console.log('   • MUI v7 Migration: https://mui.com/material-ui/migration/upgrade-to-v7/');
-            console.log('\n🛠️  Auto-migration codemods available:');
-            console.log('   npx @mui/codemod@latest v6.0.0/grid-v2-props <path>');
-            console.log('   npx @mui/codemod@latest v7.0.0/grid-props <path>');
+            console.log('   • MUI Grid Migration Guide: https://mui.com/material-ui/migration/upgrade-to-grid-v2/');
+            console.log('   • MUI System Grid Docs: https://mui.com/system/react-grid/');
+            
+            // Write results to file for GitHub Action to read
+            fs.writeFileSync('grid-issues.json', JSON.stringify(allIssues, null, 2));
+            
             process.exit(1);
           } else {
             console.log('✅ No deprecated Grid usage found!');
@@ -176,14 +190,52 @@ jobs:
           script: |
             const fs = require('fs');
             
-            // Create a summary comment for the PR
+            // Read the issues from the JSON file
+            let issues = [];
+            try {
+              if (fs.existsSync('grid-issues.json')) {
+                issues = JSON.parse(fs.readFileSync('grid-issues.json', 'utf8'));
+              }
+            } catch (error) {
+              console.log('Could not read grid-issues.json:', error);
+            }
+            
+            // Group issues by file
+            const fileGroups = {};
+            issues.forEach(issue => {
+              if (!fileGroups[issue.file]) {
+                fileGroups[issue.file] = [];
+              }
+              fileGroups[issue.file].push(issue);
+            });
+            
+            // Create detailed issue list
+            let detailedIssues = '';
+            Object.entries(fileGroups).forEach(([file, fileIssues]) => {
+              detailedIssues += `\n#### 📁 \`${file}\`\n`;
+              fileIssues.forEach(issue => {
+                detailedIssues += `- **Line ${issue.line}:${issue.column}** - ${issue.message}\n`;
+                detailedIssues += `  \`\`\`tsx\n  ${issue.code}\n  \`\`\`\n`;
+                detailedIssues += `  💡 ${issue.suggestion}\n\n`;
+              });
+            });
+            
+            // Count issues by category
+            const importIssues = issues.filter(i => i.category === 'import').length;
+            const propIssues = issues.filter(i => i.category === 'prop').length;
+            
             const comment = `## 🔍 MUI Grid Deprecation Check Results
 
-            ❌ **Deprecated Grid usage detected!**
+            ❌ **Found ${issues.length} deprecated Grid usage(s) across ${Object.keys(fileGroups).length} file(s)**
 
-            This PR contains deprecated MUI Grid patterns that should be updated.
+            ### 📊 Summary
+            - **Import issues:** ${importIssues}
+            - **JSX prop issues:** ${propIssues}
 
-            ### 🔧 Required Changes:
+            ### 🚨 Issues Found
+            ${detailedIssues}
+
+            ### 🔧 Migration Guide
 
             **Update Import Patterns:**
             \`\`\`diff
@@ -209,11 +261,11 @@ jobs:
             + <Grid>
             \`\`\`
 
-            ### 📖 Resources:
+            ### 📖 Resources
             - [MUI Grid Migration Guide](https://mui.com/material-ui/migration/upgrade-to-grid-v2/)
             - [MUI System Grid Docs](https://mui.com/system/react-grid/)
 
-            Please update these patterns before merging.
+            **Please fix these issues before merging.** ✅
             `;
 
             github.rest.issues.createComment({
