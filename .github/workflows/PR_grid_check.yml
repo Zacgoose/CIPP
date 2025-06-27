@@ -16,11 +16,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for proper diff
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Get files changed in PR
+            git diff --name-only origin/${{ github.base_ref }}..HEAD > changed_files.txt
+          else
+            # For push events, get files changed in the last commit
+            git diff --name-only HEAD~1..HEAD > changed_files.txt
+          fi
+          
+          # Filter for relevant file extensions
+          grep -E '\.(tsx?|jsx?)$' changed_files.txt > relevant_files.txt || true
+          
+          echo "Changed files:"
+          cat relevant_files.txt || echo "No relevant files changed"
 
       - name: Create Grid deprecation detection script
         run: |
@@ -28,8 +47,25 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
-          // File extensions to check
-          const extensions = ['.tsx', '.ts', '.jsx', '.js'];
+          // Read the list of changed files
+          let changedFiles = [];
+          try {
+            if (fs.existsSync('relevant_files.txt')) {
+              const content = fs.readFileSync('relevant_files.txt', 'utf8').trim();
+              if (content) {
+                changedFiles = content.split('\n').filter(file => file.trim());
+              }
+            }
+          } catch (error) {
+            console.log('Could not read changed files list:', error);
+          }
+
+          if (changedFiles.length === 0) {
+            console.log('✅ No relevant files changed in this PR');
+            process.exit(0);
+          }
+
+          console.log(`🔍 Scanning ${changedFiles.length} changed file(s) for MUI Grid deprecations...\n`);
           
           // Patterns to detect deprecated Grid usage
           const deprecatedPatterns = [
@@ -113,24 +149,12 @@ jobs:
             }
           ];
 
-          function getAllFiles(dirPath, arrayOfFiles = []) {
-            const files = fs.readdirSync(dirPath);
-            
-            files.forEach(file => {
-              const fullPath = path.join(dirPath, file);
-              if (fs.statSync(fullPath).isDirectory()) {
-                if (!file.startsWith('.') && file !== 'node_modules') {
-                  arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
-                }
-              } else if (extensions.some(ext => file.endsWith(ext))) {
-                arrayOfFiles.push(fullPath);
-              }
-            });
-            
-            return arrayOfFiles;
-          }
-
           function detectDeprecations(filePath) {
+            if (!fs.existsSync(filePath)) {
+              console.log(`⚠️  File not found: ${filePath}`);
+              return [];
+            }
+
             const content = fs.readFileSync(filePath, 'utf8');
             const issues = [];
             
@@ -165,74 +189,31 @@ jobs:
             return issues;
           }
 
-          function getAllFiles(dirPath, arrayOfFiles = []) {
-            const files = fs.readdirSync(dirPath);
-            
-            files.forEach(file => {
-              const fullPath = path.join(dirPath, file);
-              if (fs.statSync(fullPath).isDirectory()) {
-                if (!file.startsWith('.') && file !== 'node_modules') {
-                  arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
-                }
-              } else if (extensions.some(ext => file.endsWith(ext))) {
-                arrayOfFiles.push(fullPath);
-              }
-            });
-            
-            return arrayOfFiles;
-          }
-
-          function detectDeprecations(filePath) {
-            const content = fs.readFileSync(filePath, 'utf8');
-            const issues = [];
-            
-            deprecatedPatterns.forEach(({ pattern, message, suggestion, category }) => {
-              const matches = [...content.matchAll(pattern)];
-              matches.forEach(match => {
-                const lines = content.substring(0, match.index).split('\n');
-                const lineNumber = lines.length;
-                const columnNumber = lines[lines.length - 1].length + 1;
-                
-                issues.push({
-                  file: filePath,
-                  line: lineNumber,
-                  column: columnNumber,
-                  message,
-                  suggestion,
-                  category,
-                  code: match[0].trim()
-                });
-              });
-            });
-            
-            return issues;
-          }
-
-          // Main execution
-          const allFiles = getAllFiles('./');
+          // Main execution - only scan changed files
           let totalIssues = 0;
           let hasDeprecations = false;
           let allIssues = [];
 
-          console.log('🔍 Scanning for MUI Grid deprecations...\n');
-
-          allFiles.forEach(file => {
+          changedFiles.forEach(file => {
+            console.log(`📁 Checking: ${file}`);
             const issues = detectDeprecations(file);
             if (issues.length > 0) {
               hasDeprecations = true;
-              console.log(`📁 ${file}:`);
+              console.log(`  ⚠️  Found ${issues.length} issue(s):`);
               issues.forEach(issue => {
-                console.log(`  ⚠️  Line ${issue.line}:${issue.column} - ${issue.message}`);
-                console.log(`     Code: ${issue.code}`);
-                console.log(`     💡 ${issue.suggestion}\n`);
+                console.log(`    Line ${issue.line}:${issue.column} - ${issue.message}`);
+                console.log(`    Code: ${issue.code}`);
+                console.log(`    💡 ${issue.suggestion}\n`);
                 totalIssues++;
                 allIssues.push(issue);
               });
+            } else {
+              console.log(`  ✅ No issues found`);
             }
           });
 
           if (hasDeprecations) {
-            console.log(`❌ Found ${totalIssues} deprecated Grid usage(s) across ${allFiles.filter(file => detectDeprecations(file).length > 0).length} file(s)`);
+            console.log(`\n❌ Found ${totalIssues} deprecated Grid usage(s) across ${changedFiles.filter(file => detectDeprecations(file).length > 0).length} changed file(s)`);
             console.log('\n📖 Migration Resources:');
             console.log('   • MUI Grid Migration Guide: https://mui.com/material-ui/migration/upgrade-to-grid-v2/');
             console.log('   • MUI System Grid Docs: https://mui.com/system/react-grid/');
@@ -242,7 +223,7 @@ jobs:
             
             process.exit(1);
           } else {
-            console.log('✅ No deprecated Grid usage found!');
+            console.log(`\n✅ No deprecated Grid usage found in ${changedFiles.length} changed file(s)!`);
           }
           EOF
 
@@ -292,13 +273,15 @@ jobs:
             
             const comment = `## 🔍 MUI Grid Deprecation Check Results
 
-            ❌ **Found ${issues.length} deprecated Grid usage(s) across ${Object.keys(fileGroups).length} file(s)**
+            ❌ **Found ${issues.length} deprecated Grid usage(s) in ${Object.keys(fileGroups).length} changed file(s)**
+
+            _This check only scanned files modified in this PR._
 
             ### 📊 Summary
             - **Import issues:** ${importIssues}
             - **JSX prop issues:** ${propIssues}
 
-            ### 🚨 Issues Found
+            ### 🚨 Issues Found in Changed Files
             ${detailedIssues}
 
             ### 🔧 Migration Guide
@@ -331,7 +314,7 @@ jobs:
             - [MUI Grid Migration Guide](https://mui.com/material-ui/migration/upgrade-to-grid-v2/)
             - [MUI System Grid Docs](https://mui.com/system/react-grid/)
 
-            **Please fix these issues before merging.** ✅
+            **Please fix these issues in the changed files before merging.** ✅
             `;
 
             github.rest.issues.createComment({
