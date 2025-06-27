@@ -8,7 +8,7 @@ on:
       - '**/*.jsx'
       - '**/*.js'
   push:
-    branches: [main, dev]
+    branches: [main, master, develop]
 
 jobs:
   detect-grid-deprecations:
