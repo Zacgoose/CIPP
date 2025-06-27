@@ -33,32 +33,39 @@ jobs:
           
           // Patterns to detect deprecated Grid usage
           const deprecatedPatterns = [
-            // Default Grid import from @mui/material/Grid
+            // Default Grid import from @mui/material/Grid only
             {
               pattern: /import\s+Grid\s+from\s+['"]@mui\/material\/Grid['"];?/g,
               message: '❌ Deprecated Grid import from @mui/material/Grid',
               suggestion: 'Use: import Grid from "@mui/system"',
               category: 'import'
             },
-            // Default Grid import from @mui/material/Unstable_Grid2
+            // Default Grid import from @mui/material/Unstable_Grid2 only
             {
               pattern: /import\s+Grid\s+from\s+['"]@mui\/material\/Unstable_Grid2['"];?/g,
               message: '❌ Deprecated Unstable_Grid2 import',
               suggestion: 'Use: import Grid from "@mui/system"',
               category: 'import'
             },
-            // Named Grid import from @mui/material (single or multi-line)
+            // Named Grid import from @mui/material ONLY (exclude @mui/system)
             {
-              pattern: /import\s*\{[\s\S]*?\bGrid\b[\s\S]*?\}\s*from\s+['"]@mui\/material['"];?/g,
+              pattern: /import\s*\{[^}]*\bGrid\b[^}]*\}\s*from\s+['"]@mui\/material['"];?/g,
               message: '❌ Deprecated Grid import from @mui/material barrel',
               suggestion: 'Use: import { Grid } from "@mui/system"',
               category: 'import'
             },
-            // Grid alias import like "Unstable_Grid2 as Grid" from @mui/material
+            // Grid alias import like "Unstable_Grid2 as Grid" from @mui/material only
             {
-              pattern: /import\s*\{[\s\S]*?\bUnstable_Grid2\s+as\s+Grid\b[\s\S]*?\}\s*from\s+['"]@mui\/material['"];?/g,
+              pattern: /import\s*\{[^}]*\bUnstable_Grid2\s+as\s+Grid\b[^}]*\}\s*from\s+['"]@mui\/material['"];?/g,
               message: '❌ Deprecated Unstable_Grid2 as Grid import',
               suggestion: 'Use: import Grid from "@mui/system"',
+              category: 'import'
+            },
+            // Multi-line import from @mui/material containing Grid (but not @mui/system)
+            {
+              pattern: /import\s*\{[\s\S]*?\bGrid\b[\s\S]*?\}\s*from\s+['"]@mui\/material['"];?/g,
+              message: '❌ Deprecated Grid import from @mui/material (multi-line)',
+              suggestion: 'Use: import { Grid } from "@mui/system"',
               category: 'import'
             },
             // JSX prop patterns
@@ -105,6 +112,58 @@ jobs:
               category: 'prop'
             }
           ];
+
+          function getAllFiles(dirPath, arrayOfFiles = []) {
+            const files = fs.readdirSync(dirPath);
+            
+            files.forEach(file => {
+              const fullPath = path.join(dirPath, file);
+              if (fs.statSync(fullPath).isDirectory()) {
+                if (!file.startsWith('.') && file !== 'node_modules') {
+                  arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
+                }
+              } else if (extensions.some(ext => file.endsWith(ext))) {
+                arrayOfFiles.push(fullPath);
+              }
+            });
+            
+            return arrayOfFiles;
+          }
+
+          function detectDeprecations(filePath) {
+            const content = fs.readFileSync(filePath, 'utf8');
+            const issues = [];
+            
+            deprecatedPatterns.forEach(({ pattern, message, suggestion, category }) => {
+              const matches = [...content.matchAll(pattern)];
+              matches.forEach(match => {
+                // Skip if this is actually importing from @mui/system
+                if (match[0].includes('@mui/system')) {
+                  return;
+                }
+                
+                const lines = content.substring(0, match.index).split('\n');
+                const lineNumber = lines.length;
+                const columnNumber = lines[lines.length - 1].length + 1;
+                
+                // Get the matched code with some context
+                const matchedLines = match[0].split('\n');
+                const displayCode = matchedLines.length > 1 ? match[0] : match[0].trim();
+                
+                issues.push({
+                  file: filePath,
+                  line: lineNumber,
+                  column: columnNumber,
+                  message,
+                  suggestion,
+                  category,
+                  code: displayCode
+                });
+              });
+            });
+            
+            return issues;
+          }
 
           function getAllFiles(dirPath, arrayOfFiles = []) {
             const files = fs.readdirSync(dirPath);
