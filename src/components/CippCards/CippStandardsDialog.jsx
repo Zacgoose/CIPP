@@ -12,12 +12,12 @@ import {
   Divider,
   Card,
   CardContent,
+  Grid,
   IconButton,
   Tooltip,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  SvgIcon,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -34,8 +34,8 @@ import {
   PhoneAndroid as PhoneAndroidIcon,
   ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
+import { SvgIcon } from "@mui/material";
 import standards from "../../data/standards.json";
-import { Grid } from "@mui/system";
 
 const getCategoryIcon = (category) => {
   switch (category) {
@@ -196,7 +196,7 @@ export const CippStandardsDialog = ({ open, onClose, standardsData, currentTenan
               <AccordionDetails sx={{ pt: 1, pb: 2 }}>
                 <Grid container spacing={1}>
                   {categoryStandards.map(({ key, config, info }) => (
-                    <Grid size={{ xs: 12, md: 6 }} key={key}>
+                    <Grid item xs={12} md={6} key={key}>
                       <Card variant="outlined" sx={{ height: "100%", mb: 1, p: 0 }}>
                         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                           <Stack spacing={1}>
