@@ -17,12 +17,18 @@ export const PrivateRoute = ({ children, routeType }) => {
     staleTime: 120000, // 2 minutes
   });
 
-  // Check if the session is still loading before determining authentication status
-  if (
-    session.isLoading ||
-    apiRoles.isLoading ||
-    (apiRoles.isFetching && (apiRoles.data === null || apiRoles.data === undefined))
-  ) {
+  // First check for loading of SWA roles
+  if (session.isLoading || session.isFetching) {
+    return <LoadingPage />;
+  }
+
+  // Then check if it is null and require re-auth if so
+  if (session.isSuccess && session.data?.clientPrincipal === null) {
+    return <UnauthenticatedPage />;
+  }
+
+  // Then if roles are present check loading for API roles
+  if (apiRoles.isLoading || apiRoles.isFetching) {
     return <LoadingPage />;
   }
 
@@ -34,11 +40,6 @@ export const PrivateRoute = ({ children, routeType }) => {
     (apiRoles?.isSuccess && !apiRoles?.data) // No client principal data, indicating API might be offline
   ) {
     return <ApiOfflinePage />;
-  }
-
-  // if not logged into swa
-  if (null === session?.data?.clientPrincipal || session?.data === undefined) {
-    return <UnauthenticatedPage />;
   }
 
   let roles = null;

@@ -56,6 +56,10 @@ const ApiOfflinePage = () => {
           errorMessage +=
             " (API endpoint not found, this can be the case if your Function App is on Version 7 or below)";
         }
+        if (error.response.status === 502) {
+          errorMessage +=
+            " (Bad Gateway - your Function App may be offline, starting up, or experiencing issues)";
+        }
       } else if (error.request) {
         // Request was made but no response received
         errorMessage = "No response received from API. Check if your Function App is running.";
