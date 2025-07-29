@@ -4,7 +4,7 @@
     "cat": "Global Standards",
     "tag": [],
     "helpText": "Defines the email address to receive general updates and information related to M365 subscriptions. Leave a contact field blank if you do not want to update the contact information.",
-    "docsDescription": "",
+    "docsDescription": "Test docs desc",
     "executiveText": "Establishes designated contact email addresses for receiving important Microsoft 365 subscription updates and notifications. This ensures proper communication channels are maintained for general, security, marketing, and technical matters, improving organizational responsiveness to critical system updates.",
     "addedComponent": [
       {
