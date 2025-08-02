@@ -13,7 +13,7 @@ import {
   Input,
 } from "@mui/material";
 import { CippAutoComplete } from "./CippAutocomplete";
-import { Controller, useFormState } from "react-hook-form";
+import { Controller, useFormState, useWatch } from "react-hook-form";
 import { DateTimePicker } from "@mui/x-date-pickers"; // Make sure to install @mui/x-date-pickers
 import CSVReader from "../CSVReader";
 import get from "lodash/get";
@@ -38,17 +38,17 @@ const convertBracketsToDots = (name) => {
 };
 
 // Helper function to check if dependent field conditions are met
-const isDependentFieldReady = (dependsOn, formValues) => {
+const isDependentFieldReady = (dependsOn, watchedValues) => {
   if (!dependsOn) return true;
   
   if (Array.isArray(dependsOn)) {
-    return dependsOn.every(field => {
-      const value = formValues[field];
+    return dependsOn.every((field, index) => {
+      const value = watchedValues[index];
       return value && value !== '' && value !== null && value !== undefined;
     });
   }
   
-  const value = formValues[dependsOn];
+  const value = watchedValues;
   return value && value !== '' && value !== null && value !== undefined;
 };
 
@@ -123,25 +123,38 @@ export const CippFormComponent = (props) => {
   // Convert the name from bracket notation to dot notation
   const convertedName = convertBracketsToDots(name);
   
-  // Watch all form values for dependent field logic
-  const watchedValues = formControl?.watch ? formControl.watch() : {};
+  // Watch only the specific fields we depend on (or skip watching if no dependencies)
+  const watchedDependencies = useWatch({
+    control: formControl.control,
+    name: dependsOn ? (Array.isArray(dependsOn) ? dependsOn : [dependsOn]) : [],
+    disabled: !dependsOn, // Skip watching if no dependencies
+    defaultValue: Array.isArray(dependsOn) ? [] : null
+  });
   
   // Check if this field should be visible based on dependencies
   const shouldShowField = useMemo(() => {
-    return isDependentFieldReady(dependsOn, watchedValues);
-  }, [dependsOn, watchedValues]);
+    if (!dependsOn) return true; // Always show if no dependencies
+    return isDependentFieldReady(dependsOn, watchedDependencies);
+  }, [dependsOn, watchedDependencies]);
+  
+  // For API resolution, we need all form values, but only when field is visible
+  // and only for autoComplete fields that need dynamic API config
+  const allFormValues = useWatch({
+    control: formControl.control,
+    disabled: !shouldShowField || type !== "autoComplete" || !api
+  });
   
   // Resolve dynamic API configuration for autoComplete fields
   const [dynamicApiConfig, setDynamicApiConfig] = useState(null);
   
   useEffect(() => {
     if (type === "autoComplete" && api && shouldShowField) {
-      const resolved = resolveDynamicApiConfig(api, watchedValues);
+      const resolved = resolveDynamicApiConfig(api, allFormValues);
       setDynamicApiConfig(resolved);
     } else if (type === "autoComplete" && !shouldShowField) {
       setDynamicApiConfig(null);
     }
-  }, [type, api, shouldShowField, watchedValues]);
+  }, [type, api, shouldShowField, allFormValues]);
 
   // Don't render field if dependencies aren't met
   if (!shouldShowField) {
