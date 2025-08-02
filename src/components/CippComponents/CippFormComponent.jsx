@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { CippAutoComplete } from "./CippAutocomplete";
 import { Controller, useFormState } from "react-hook-form";
-import { DateTimePicker } from "@mui/x-date-pickers";
+import { DateTimePicker } from "@mui/x-date-pickers";  // Make sure to install @mui/x-date-pickers
 import CSVReader from "../CSVReader";
 import get from "lodash/get";
 import {
@@ -29,13 +29,12 @@ import StarterKit from "@tiptap/starter-kit";
 import { CippDataTable } from "../CippTable/CippDataTable";
 import { CloudUpload } from "@mui/icons-material";
 import React, { useMemo, useEffect, useState } from "react";
-import { AccessTime } from "@mui/icons-material";
 
 // Helper function to convert bracket notation to dot notation
 // Improved to correctly handle nested bracket notations
 const convertBracketsToDots = (name) => {
   if (!name) return "";
-  return name.replace(/\[(\d+)\]/g, ".$1");
+  return name.replace(/\[(\d+)\]/g, ".$1"); // Replace [0] with .0
 };
 
 // Helper function to check if dependent field conditions are met
@@ -111,16 +110,15 @@ export const CippFormComponent = (props) => {
     validators,
     formControl,
     type = "textField",
-    name,
+    name, // The name that may have bracket notation
     label,
-    labelLocation = "behind",
+    labelLocation = "behind", // Default location for switches
     defaultValue,
     helperText,
     dependsOn, // New prop for dependent fields
     api, // API configuration that might be dynamic
     ...other
   } = props;
-  
   const { errors } = useFormState({ control: formControl.control });
   // Convert the name from bracket notation to dot notation
   const convertedName = convertBracketsToDots(name);
@@ -151,7 +149,7 @@ export const CippFormComponent = (props) => {
   }
 
   const renderSwitchWithLabel = (element) => {
-    if (!label) return element;
+    if (!label) return element; // No label for the switch if label prop is not provided
 
     if (labelLocation === "above") {
       return (
@@ -562,18 +560,18 @@ export const CippFormComponent = (props) => {
                           : ["year", "month", "day", "hours", "minutes"]
                       }
                       label={label}
-                      value={field.value ? new Date(field.value * 1000) : null}
+                      value={field.value ? new Date(field.value * 1000) : null} // Convert Unix timestamp to Date object
                       onChange={(date) => {
                         if (date) {
-                          const unixTimestamp = Math.floor(date.getTime() / 1000);
-                          field.onChange(unixTimestamp);
+                          const unixTimestamp = Math.floor(date.getTime() / 1000); // Convert to Unix timestamp
+                          field.onChange(unixTimestamp); // Pass the Unix timestamp to the form
                         } else {
-                          field.onChange(null);
+                          field.onChange(null); // Handle the case where no date is selected
                         }
                       }}
                       ampm={false}
                       minutesStep={15}
-                      inputFormat="yyyy/MM/dd HH:mm"
+                      inputFormat="yyyy/MM/dd HH:mm" // Display format
                       renderInput={(inputProps) => (
                         <TextField
                           {...inputProps}
