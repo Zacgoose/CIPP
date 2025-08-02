@@ -4,10 +4,7 @@ import { TrashIcon, MagnifyingGlassIcon, PlayCircleIcon } from "@heroicons/react
 import {
   Archive,
   MailOutline,
-  Person,
-  Room,
   Visibility,
-  VisibilityOff,
   PhonelinkLock,
   Key,
   PostAdd,
@@ -19,8 +16,8 @@ import {
   MailLock,
   SettingsEthernet,
   CalendarMonth,
-  Email,
   PersonAdd,
+  Email,
 } from "@mui/icons-material";
 import { useSettings } from "/src/hooks/use-settings.js";
 import { useMemo } from "react";
@@ -28,6 +25,7 @@ import { useMemo } from "react";
 export const CippExchangeActions = () => {
   const tenant = useSettings().currentTenant;
   
+
   // Memoized API configuration for all user selection fields
   const userApiConfig = useMemo(() => ({
     url: "/api/ListGraphRequest",
@@ -50,12 +48,11 @@ export const CippExchangeActions = () => {
       url: "/api/ExecModifyMBPerms",
       icon: <PersonAdd />,
       data: {
-        userID: "UPN", // This maps the selected mailbox to userID
+        userID: "UPN",
       },
       confirmText: "Add the specified permissions to selected mailboxes?",
-      multiPost: false, // Single bulk request
+      multiPost: false,
       data: {
-        // Don't map individual fields here since we're handling all data in customDataformatter
       },
       fields: [
         {
@@ -91,19 +88,15 @@ export const CippExchangeActions = () => {
         },
       ],
       customDataformatter: (rows, action, formData) => {
-        console.log("All selected rows:", rows);
-        console.log("Form data:", formData);
         
-        // Ensure rows is an array - this should contain ALL selected mailboxes
         const mailboxArray = Array.isArray(rows) ? rows : [rows];
-        console.log("Processing mailboxes count:", mailboxArray.length);
         
         // Create bulk request array - one object per mailbox
         const bulkRequestData = mailboxArray.map(mailbox => {
           const permissions = [];
           const autoMap = formData.autoMap === undefined ? true : formData.autoMap;
 
-          // Add type: "user" to match working format
+          // Add type: "user" to match format
           const addTypeToUsers = (users) => {
             return users.map(user => ({
               ...user,
@@ -140,18 +133,14 @@ export const CippExchangeActions = () => {
           }
 
           return {
-            userID: mailbox.UPN || mailbox.userPrincipalName || mailbox.primarySmtpAddress,
-            tenantFilter: tenant,
+            userID: mailbox.UPN,
             permissions: permissions,
           };
         });
         
-        console.log("Final bulk request data:", bulkRequestData);
-        console.log("Mailbox requests count:", bulkRequestData.length);
-        
         return { 
           mailboxRequests: bulkRequestData,
-          tenantFilter: tenant // Also include tenant at top level
+          tenantFilter: tenant
         };
       },
       color: "primary",
@@ -179,40 +168,28 @@ export const CippExchangeActions = () => {
       icon: <PhonelinkLock />,
     },
     {
-      label: "Convert to User Mailbox",
+      label: "Convert Mailbox",
       type: "POST",
+      icon: <Email />,
       url: "/api/ExecConvertMailbox",
-      icon: <Person />,
-      data: {
-        ID: "UPN",
-        MailboxType: "!Regular",
-      },
-      confirmText: "Are you sure you want to convert [UPN] to a user mailbox?",
-      condition: (row) => row.recipientTypeDetails !== "UserMailbox",
-    },
-    {
-      label: "Convert to Shared Mailbox",
-      type: "POST",
-      icon: <MailOutline />,
-      url: "/api/ExecConvertMailbox",
-      data: {
-        ID: "UPN",
-        MailboxType: "!Shared",
-      },
-      confirmText: "Are you sure you want to convert [UPN] to a shared mailbox?",
-      condition: (row) => row.recipientTypeDetails !== "SharedMailbox",
-    },
-    {
-      label: "Convert to Room Mailbox",
-      type: "POST",
-      url: "/api/ExecConvertMailbox",
-      icon: <Room />,
-      data: {
-        ID: "UPN",
-        MailboxType: "!Room",
-      },
-      confirmText: "Are you sure you want to convert [UPN] to a room mailbox?",
-      condition: (row) => row.recipientTypeDetails !== "RoomMailbox",
+      data: { ID: "UPN" },
+      fields: [
+        {
+          type: "radio",
+          name: "MailboxType",
+          label: "Mailbox Type",
+          options: [
+            { label: "User Mailbox", value: "Regular" },
+            { label: "Shared Mailbox", value: "Shared" },
+            { label: "Room Mailbox", value: "Room" },
+            { label: "Equipment Mailbox", value: "Equipment" },
+          ],
+          validators: { required: "Please select a mailbox type" },
+        },
+      ],
+      confirmText:
+        "Pick the type of mailbox you want to convert [UPN] of mailbox type [recipientTypeDetails] to:",
+      multiPost: false,
     },
     {
       label: "Enable Online Archive",
@@ -236,30 +213,27 @@ export const CippExchangeActions = () => {
       condition: (row) => row.ArchiveGuid !== "00000000-0000-0000-0000-000000000000",
     },
     {
-      label: "Hide from Global Address List",
-      type: "POST",
-      url: "/api/ExecHideFromGAL",
-      icon: <VisibilityOff />,
-      data: {
-        ID: "UPN",
-        HidefromGAL: true,
-      },
-      confirmText:
-        "Are you sure you want to hide [UPN] from the global address list? This will not work if the user is AD Synced.",
-      condition: (row) => row.HiddenFromAddressListsEnabled === false,
-    },
-    {
-      label: "Unhide from Global Address List",
+      label: "Set Global Address List visibility",
       type: "POST",
       url: "/api/ExecHideFromGAL",
       icon: <Visibility />,
       data: {
         ID: "UPN",
-        HidefromGAL: false,
       },
+      fields: [
+        {
+          type: "radio",
+          name: "HidefromGAL",
+          label: "Global Address List visibility",
+          options: [
+            { label: "Hidden", value: true },
+            { label: "Shown", value: false },
+          ],
+          validators: { required: "Please select a global address list state" },
+        },
+      ],
       confirmText:
-        "Are you sure you want to unhide [UPN] from the global address list? This will not work if the user is AD Synced.",
-      condition: (row) => row.HiddenFromAddressListsEnabled === true,
+        "Are you sure you want to set the global address list state for [UPN]? Changes can take up to 72 hours to take effect.",
     },
     {
       label: "Start Managed Folder Assistant",
@@ -282,22 +256,24 @@ export const CippExchangeActions = () => {
       multiPost: false,
     },
     {
-      label: "Copy Sent Items to for Delegated Mailboxes",
+      label: "Set Copy Sent Items for Delegated Mailboxes",
       type: "POST",
-      url: "/api/ExecCopyForSent",
-      data: { ID: "UPN", MessageCopyForSentAsEnabled: true },
-      confirmText: "Are you sure you want to enable Copy Sent Items on [UPN]?",
       icon: <MailOutline />,
-      condition: (row) => row.MessageCopyForSentAsEnabled === false,
-    },
-    {
-      label: "Disable Copy Sent Items for Delegated Mailboxes",
-      type: "POST",
       url: "/api/ExecCopyForSent",
-      data: { ID: "UPN", MessageCopyForSentAsEnabled: false },
-      confirmText: "Are you sure you want to disable Copy Sent Items on [UPN]?",
-      icon: <MailOutline />,
-      condition: (row) => row.MessageCopyForSentAsEnabled === true,
+      data: { ID: "UPN" },
+      fields: [
+        {
+          type: "radio",
+          name: "MessageCopyForSentAsEnabled",
+          label: "Copy Sent Items",
+          options: [
+            { label: "Enabled", value: true },
+            { label: "Disabled", value: false },
+          ],
+          validators: { required: "Please select a copy sent items state" },
+        },
+      ],
+      confirmText: "Are you sure you want to set Copy Sent Items for [UPN]?",
     },
     {
       label: "Set Litigation Hold",
@@ -349,6 +325,7 @@ export const CippExchangeActions = () => {
           name: "locale",
           type: "textField",
           placeholder: "e.g. en-US",
+          validators: { required: "Please enter a locale" },
         },
       ],
     },
@@ -387,6 +364,7 @@ export const CippExchangeActions = () => {
           name: "quota",
           type: "textField",
           placeholder: "e.g. 1000MB, 10GB,1TB",
+          validators: { required: "Please enter a quota" },
         },
       ],
     },
@@ -406,6 +384,7 @@ export const CippExchangeActions = () => {
           name: "quota",
           type: "textField",
           placeholder: "e.g. 1000MB, 10GB,1TB",
+          validators: { required: "Please enter a quota" },
         },
       ],
     },
@@ -422,6 +401,7 @@ export const CippExchangeActions = () => {
           name: "quota",
           type: "textField",
           placeholder: "e.g. 1000MB, 10GB,1TB",
+          validators: { required: "Please enter a quota" },
         },
       ],
     },
@@ -432,7 +412,9 @@ export const CippExchangeActions = () => {
       data: { UPN: "UPN" },
       confirmText: "Configure calendar processing settings for [UPN]",
       icon: <CalendarMonth />,
-      condition: (row) => row.recipientTypeDetails === "RoomMailbox" || row.recipientTypeDetails === "EquipmentMailbox",
+      condition: (row) =>
+        row.recipientTypeDetails === "RoomMailbox" ||
+        row.recipientTypeDetails === "EquipmentMailbox",
       fields: [
         {
           label: "Automatically Process Meeting Requests",

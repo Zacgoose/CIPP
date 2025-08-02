@@ -10,6 +10,7 @@ import {
   RadioGroup,
   Button,
   Box,
+  Input,
 } from "@mui/material";
 import { CippAutoComplete } from "./CippAutocomplete";
 import { Controller, useFormState } from "react-hook-form";
@@ -26,6 +27,7 @@ import {
 } from "mui-tiptap";
 import StarterKit from "@tiptap/starter-kit";
 import { CippDataTable } from "../CippTable/CippDataTable";
+import { CloudUpload } from "@mui/icons-material";
 import React, { useMemo, useEffect, useState } from "react";
 import { AccessTime } from "@mui/icons-material";
 
@@ -226,6 +228,11 @@ export const CippFormComponent = (props) => {
           <Typography variant="subtitle3" color="error">
             {get(errors, convertedName, {})?.message}
           </Typography>
+          {helperText && (
+            <Typography variant="subtitle3" color="text.secondary">
+              {helperText}
+            </Typography>
+          )}
         </>
       );
     case "password":
@@ -248,6 +255,11 @@ export const CippFormComponent = (props) => {
           <Typography variant="subtitle3" color="error">
             {get(errors, convertedName, {})?.message}
           </Typography>
+          {helperText && (
+            <Typography variant="subtitle3" color="text.secondary">
+              {helperText}
+            </Typography>
+          )}
         </>
       );
     case "number":
@@ -269,6 +281,11 @@ export const CippFormComponent = (props) => {
           <Typography variant="subtitle3" color="error">
             {get(errors, convertedName, {})?.message}
           </Typography>
+          {helperText && (
+            <Typography variant="subtitle3" color="text.secondary">
+              {helperText}
+            </Typography>
+          )}
         </>
       );
 
@@ -369,7 +386,6 @@ export const CippFormComponent = (props) => {
                   label={label}
                   multiple={false}
                   onChange={(value) => field.onChange(value?.value)}
-                  helperText={helperText}
                 />
               )}
             />
@@ -397,7 +413,6 @@ export const CippFormComponent = (props) => {
                   defaultValue={field.value}
                   label={label}
                   onChange={(value) => field.onChange(value)}
-                  helperText={helperText}
                 />
               )}
             />
@@ -405,10 +420,18 @@ export const CippFormComponent = (props) => {
           <Typography variant="subtitle3" color="error">
             {get(errors, convertedName, {}).message}
           </Typography>
+          {helperText && (
+            <Typography variant="subtitle3" color="text.secondary">
+              {helperText}
+            </Typography>
+          )}
         </>
       );
 
-    case "richText":
+    case "richText": {
+      const editorInstanceRef = React.useRef(null);
+      const hasSetInitialValue = React.useRef(false);
+
       return (
         <>
           <div>
@@ -416,30 +439,48 @@ export const CippFormComponent = (props) => {
               name={convertedName}
               control={formControl.control}
               rules={validators}
-              render={({ field }) => (
-                <>
-                  <Typography variant="subtitle2">{label}</Typography>
-                  <RichTextEditor
-                    {...other}
-                    ref={field.ref}
-                    key={field.value ? "edit" : ""}
-                    extensions={[StarterKit]}
-                    content={field.value || ""}
-                    onUpdate={({ editor }) => {
-                      field.onChange(editor.getHTML());
-                    }}
-                    label={label}
-                    renderControls={() => (
-                      <MenuControlsContainer>
-                        <MenuSelectHeading />
-                        <MenuDivider />
-                        <MenuButtonBold />
-                        <MenuButtonItalic />
-                      </MenuControlsContainer>
-                    )}
-                  />
-                </>
-              )}
+              render={({ field }) => {
+                const { value, onChange, ref } = field;
+
+                // Set content only once on first render
+                React.useEffect(() => {
+                  if (
+                    editorInstanceRef.current &&
+                    !hasSetInitialValue.current &&
+                    typeof value === "string"
+                  ) {
+                    editorInstanceRef.current.commands.setContent(value || "", false);
+                    hasSetInitialValue.current = true;
+                  }
+                }, [value]);
+
+                return (
+                  <>
+                    <Typography variant="subtitle2">{label}</Typography>
+                    <RichTextEditor
+                      {...other}
+                      ref={ref}
+                      extensions={[StarterKit]}
+                      content="" // do not preload content
+                      onCreate={({ editor }) => {
+                        editorInstanceRef.current = editor;
+                      }}
+                      onUpdate={({ editor }) => {
+                        onChange(editor.getHTML());
+                      }}
+                      label={label}
+                      renderControls={() => (
+                        <MenuControlsContainer>
+                          <MenuSelectHeading />
+                          <MenuDivider />
+                          <MenuButtonBold />
+                          <MenuButtonItalic />
+                        </MenuControlsContainer>
+                      )}
+                    />
+                  </>
+                );
+              }}
             />
           </div>
           <Typography variant="subtitle3" color="error">
@@ -447,7 +488,7 @@ export const CippFormComponent = (props) => {
           </Typography>
         </>
       );
-
+    }
     case "CSVReader":
       const remapData = (data, nameToCSVMapping) => {
         if (nameToCSVMapping && data) {
@@ -511,7 +552,7 @@ export const CippFormComponent = (props) => {
               control={formControl.control}
               rules={validators}
               render={({ field }) => (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Box sx={{ flexGrow: 1 }}>
                     <DateTimePicker
                       slotProps={{ textField: { fullWidth: true } }}
@@ -552,19 +593,20 @@ export const CippFormComponent = (props) => {
                     disabled={other?.disabled}
                     onClick={() => {
                       const now = new Date();
-                      // Round to nearest 15-minute interval
+                      // Always round down to the previous 15-minute mark, unless exactly on a 15-min mark
                       const minutes = now.getMinutes();
-                      const roundedMinutes = Math.round(minutes / 15) * 15;
+                      const roundedMinutes =
+                        minutes % 15 === 0 ? minutes : Math.floor(minutes / 15) * 15;
                       now.setMinutes(roundedMinutes, 0, 0); // Set seconds and milliseconds to 0
                       const unixTimestamp = Math.floor(now.getTime() / 1000);
                       field.onChange(unixTimestamp);
                     }}
                     sx={{
-                      height: '42px',
-                      minWidth: '42px',
-                      padding: '8px 12px',
-                      alignSelf: 'flex-end',
-                      marginBottom: '0px',
+                      height: "42px",
+                      minWidth: "42px",
+                      padding: "8px 12px",
+                      alignSelf: "flex-end",
+                      marginBottom: "0px", // Adjust to align with input field
                     }}
                     title="Set to current date and time"
                   >
@@ -577,6 +619,71 @@ export const CippFormComponent = (props) => {
           <Typography variant="subtitle3" color="error">
             {get(errors, convertedName, {})?.message}
           </Typography>
+        </>
+      );
+
+    case "file":
+      return (
+        <>
+          <div>
+            <Controller
+              name={convertedName}
+              control={formControl.control}
+              rules={validators}
+              render={({ field }) => (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    {label}
+                  </Typography>
+                  <Box
+                    sx={{
+                      border: "2px dashed #ccc",
+                      borderRadius: 2,
+                      p: 3,
+                      textAlign: "center",
+                      cursor: "pointer",
+                      "&:hover": {
+                        borderColor: "primary.main",
+                        backgroundColor: "rgba(0, 0, 0, 0.02)",
+                      },
+                    }}
+                    onClick={() => document.getElementById(`file-input-${convertedName}`).click()}
+                  >
+                    <CloudUpload sx={{ fontSize: 40, color: "grey.500", mb: 1 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {field.value ? field.value.name : "Click to upload file or drag and drop"}
+                    </Typography>
+                    {field.value && (
+                      <Typography variant="caption" color="text.secondary">
+                        Size: {(field.value.size / 1024).toFixed(2)} KB
+                      </Typography>
+                    )}
+                  </Box>
+                  <Input
+                    id={`file-input-${convertedName}`}
+                    type="file"
+                    sx={{ display: "none" }}
+                    inputProps={{ ...other }}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      field.onChange(file);
+                      if (other.onChange) {
+                        other.onChange(file);
+                      }
+                    }}
+                  />
+                </Box>
+              )}
+            />
+          </div>
+          <Typography variant="subtitle3" color="error">
+            {get(errors, convertedName, {})?.message}
+          </Typography>
+          {helperText && (
+            <Typography variant="subtitle3" color="text.secondary">
+              {helperText}
+            </Typography>
+          )}
         </>
       );
 
