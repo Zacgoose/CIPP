@@ -23,7 +23,6 @@ import { useMemo } from "react";
 export const CippExchangeActions = () => {
   const tenant = useSettings().currentTenant;
   
-
   // API configuration for all user selection fields
   const userApiConfig = useMemo(() => ({
     url: "/api/ListGraphRequest",

@@ -353,7 +353,7 @@ export const CippUserActions = () => {
             labelField: "webUrl",
             valueField: "webUrl",
             addedField: {
-              siteId: "siteId", // Fix: Use "siteId" not "id" based on API response
+              siteId: "siteId",
             },
             queryKey: `sharepointSites-${tenant}`,
           },
