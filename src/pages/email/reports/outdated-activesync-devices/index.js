@@ -2,19 +2,21 @@ import { Layout as DashboardLayout } from "/src/layouts/index.js";
 import { CippTablePage } from "/src/components/CippComponents/CippTablePage.jsx";
 
 const Page = () => {
+  const columns = [
+    "userDisplayName",
+    "userPrincipalName",
+    "deviceId",
+    "deviceModel",
+    "clientType",
+    "clientVersion",
+    "deviceOS",
+    "deviceFriendlyName",
+    "firstSyncTime",
+    "lastSuccessSync",
+  ];
+
   const offCanvas = {
-    extendedInfoFields: [
-      "userDisplayName",
-      "userPrincipalName",
-      "deviceId",
-      "deviceModel",
-      "clientType",
-      "clientVersion",
-      "deviceOS",
-      "deviceFriendlyName",
-      "firstSyncTime",
-      "lastSuccessSync",
-    ],
+    extendedInfoFields: columns,
   };
 
   return (
@@ -22,18 +24,7 @@ const Page = () => {
       title="Outdated ActiveSync Devices"
       apiUrl="/api/ListOutdatedActiveSyncDevices"
       offCanvas={offCanvas}
-      simpleColumns={[
-        "userDisplayName",
-        "userPrincipalName",
-        "deviceId",
-        "deviceModel",
-        "clientType",
-        "clientVersion",
-        "deviceOS",
-        "deviceFriendlyName",
-        "firstSyncTime",
-        "lastSuccessSync",
-      ]}
+      simpleColumns={columns}
     />
   );
 };
