@@ -712,8 +712,8 @@ export const nativeMenuItems = [
             permissions: ["Exchange.Mailbox.*"],
           },
           {
-            title: "Mailbox Permissions",
-            path: "/email/reports/mailbox-permissions",
+            title: "Outdated ActiveSync Devices",
+            path: "/email/reports/outdated-activesync-devices",
             permissions: ["Exchange.Mailbox.*"],
           },
           {
