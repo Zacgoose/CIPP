@@ -184,7 +184,7 @@ const CippSchedulerForm = (props) => {
     name: "Trigger.DeltaConditions",
   });
   const commands = ApiGetCall({
-    url: "/api/ListFunctionParameters?Module=CIPPCore",
+    url: "/api/ListFunctionParameters",
     queryKey: "ListCommands",
   });
 
