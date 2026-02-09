@@ -375,5 +375,35 @@
       }
     ],
     "description": "Monitors Secure Score and alerts when it falls below the specified threshold (absolute or percent value). Helps identify security gaps and areas for improvement."
+  },
+  {
+    "name": "CustomScript",
+    "label": "Custom PowerShell Script Alert",
+    "recommendedRunInterval": "1d",
+    "requiresInput": true,
+    "multipleInput": true,
+    "inputs": [
+      {
+        "inputType": "autoComplete",
+        "inputLabel": "Select Custom Script",
+        "inputName": "ScriptGuid",
+        "required": true,
+        "multiple": false,
+        "creatable": false,
+        "api": {
+          "url": "/api/ListCustomScripts",
+          "valueField": "ScriptGuid",
+          "labelField": "ScriptName",
+          "queryKey": "ListCustomScriptsForAlert"
+        }
+      },
+      {
+        "inputType": "textField",
+        "inputLabel": "Script Parameters (JSON format)",
+        "inputName": "Parameters",
+        "multiline": true
+      }
+    ],
+    "description": "Execute a custom PowerShell script for alerting. Scripts run with read-only access to tenant data and are validated for security."
   }
 ]
