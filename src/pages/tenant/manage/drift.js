@@ -442,6 +442,10 @@ const ManageDriftPage = () => {
     return String(value);
   };
 
+  function getDeviationReceivedValue(deviation) {
+    return deviation?.receivedValue || deviation?.CurrentValue || deviation?.StandardValue;
+  }
+
   // Helper function to create deviation items
   const createDeviationItems = (deviations, statusOverride = null) => {
     return (deviations || [])
@@ -529,7 +533,7 @@ const ManageDriftPage = () => {
           statusColor: isLicenseSkipped ? "text.secondary" : getDeviationColor(actualStatus),
           statusText: actualStatusText,
           standardName: deviation.standardName, // Store the original standardName for action handlers
-          receivedValue: deviation.receivedValue || deviation.CurrentValue || deviation.StandardValue, // Store the original receivedValue for action handlers
+          receivedValue: getDeviationReceivedValue(deviation), // Store the original receivedValue for action handlers
           expectedValue: deviation.expectedValue, // Store the original expectedValue for action handlers
           originalDeviation: deviation, // Store the complete original deviation object for reference
           isLicenseSkipped: isLicenseSkipped, // Flag for filtering and disabling actions
@@ -1071,9 +1075,6 @@ const ManageDriftPage = () => {
   const handleMenuClose = (itemId) => {
     setAnchorEl((prev) => ({ ...prev, [itemId]: null }));
   };
-
-  const getDeviationReceivedValue = (deviation) =>
-    deviation?.receivedValue || deviation?.CurrentValue || deviation?.StandardValue;
 
   const handleAction = (action, itemId) => {
     const deviation = processedDriftData.currentDeviations[itemId - 1];
