@@ -529,7 +529,7 @@ const ManageDriftPage = () => {
           statusColor: isLicenseSkipped ? "text.secondary" : getDeviationColor(actualStatus),
           statusText: actualStatusText,
           standardName: deviation.standardName, // Store the original standardName for action handlers
-          receivedValue: deviation.receivedValue, // Store the original receivedValue for action handlers
+          receivedValue: deviation.receivedValue || deviation.CurrentValue || deviation.StandardValue, // Store the original receivedValue for action handlers
           expectedValue: deviation.expectedValue, // Store the original expectedValue for action handlers
           originalDeviation: deviation, // Store the complete original deviation object for reference
           isLicenseSkipped: isLicenseSkipped, // Flag for filtering and disabling actions
@@ -1072,6 +1072,9 @@ const ManageDriftPage = () => {
     setAnchorEl((prev) => ({ ...prev, [itemId]: null }));
   };
 
+  const getDeviationReceivedValue = (deviation) =>
+    deviation?.receivedValue || deviation?.CurrentValue || deviation?.StandardValue;
+
   const handleAction = (action, itemId) => {
     const deviation = processedDriftData.currentDeviations[itemId - 1];
     if (!deviation) return;
@@ -1106,7 +1109,7 @@ const ManageDriftPage = () => {
           {
             standardName: deviation.standardName,
             status: status,
-            receivedValue: deviation.receivedValue,
+            receivedValue: getDeviationReceivedValue(deviation),
           },
         ],
         TenantFilter: tenantFilter,
@@ -1159,7 +1162,7 @@ const ManageDriftPage = () => {
           {
             standardName: deviation.standardName, // Use the standardName from the original deviation data
             status: status,
-            receivedValue: deviation.receivedValue,
+            receivedValue: getDeviationReceivedValue(deviation),
           },
         ],
         TenantFilter: tenantFilter,
@@ -1232,7 +1235,7 @@ const ManageDriftPage = () => {
     const deviations = selectedDeviations.map((deviation) => ({
       standardName: deviation.standardName,
       status: status,
-      receivedValue: deviation.receivedValue,
+      receivedValue: getDeviationReceivedValue(deviation),
     }));
 
     // Set action data for CippApiDialog
