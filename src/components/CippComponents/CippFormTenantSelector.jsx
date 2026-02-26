@@ -19,6 +19,19 @@ export const CippFormTenantSelector = ({
   includeOffboardingDefaults = false,
   ...other
 }) => {
+  const parseOffboardingDefaults = (tenant) => {
+    const defaults = tenant.offboardingDefaults ?? tenant.OffboardingDefaults;
+    if (typeof defaults === "string") {
+      try {
+        return JSON.parse(defaults);
+      } catch {
+        // Invalid tenant defaults payload should not block tenant selection.
+        return null;
+      }
+    }
+    return defaults;
+  };
+
   const validators = () => {
     if (required) {
       return {
@@ -72,15 +85,15 @@ export const CippFormTenantSelector = ({
             value: tenant[valueField],
             label: `${tenant.displayName} (${tenant.defaultDomainName})`,
             type: "Tenant",
-            addedFields: {
-              defaultDomainName: tenant.defaultDomainName,
-              displayName: tenant.displayName,
-              customerId: tenant.customerId,
-              ...(includeOffboardingDefaults && {
-                offboardingDefaults: tenant.offboardingDefaults,
-              }),
-            },
-          }))
+              addedFields: {
+                defaultDomainName: tenant.defaultDomainName,
+                displayName: tenant.displayName,
+                customerId: tenant.customerId,
+                ...(includeOffboardingDefaults && {
+                  offboardingDefaults: parseOffboardingDefaults(tenant),
+                }),
+              },
+            }))
         : [];
 
       const groupData =
