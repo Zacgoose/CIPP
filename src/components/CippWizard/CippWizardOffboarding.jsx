@@ -10,6 +10,7 @@ import { useSettings } from "../../hooks/use-settings";
 export const CippWizardOffboarding = (props) => {
   const { postUrl, formControl, onPreviousStep, onNextStep, currentStep } = props;
   const currentTenant = formControl.watch("tenantFilter");
+  const tenantDefaults = currentTenant?.addedFields?.offboardingDefaults;
   const selectedUsers = useWatch({ control: formControl.control, name: "user" });
   const [showAlert, setShowAlert] = useState(false);
   const userSettingsDefaults = useSettings().userSettingsDefaults;
@@ -35,11 +36,13 @@ export const CippWizardOffboarding = (props) => {
   useEffect(() => {
     const currentTenantId = currentTenant?.value;
     const appliedDefaultsForTenant = formControl.getValues("HIDDEN_appliedDefaultsForTenant");
+    const hasTenantDefaultsField = Object.prototype.hasOwnProperty.call(
+      currentTenant?.addedFields ?? {},
+      "offboardingDefaults",
+    );
 
     // Only apply defaults if we haven't applied them for this tenant yet
-    if (currentTenantId && appliedDefaultsForTenant !== currentTenantId) {
-      const tenantDefaults = currentTenant?.addedFields?.offboardingDefaults;
-
+    if (currentTenantId && appliedDefaultsForTenant !== currentTenantId && hasTenantDefaultsField) {
       if (tenantDefaults) {
         // Apply tenant defaults
         Object.entries(tenantDefaults).forEach(([key, value]) => {
@@ -59,7 +62,7 @@ export const CippWizardOffboarding = (props) => {
       // Mark that we've applied defaults for this tenant
       formControl.setValue("HIDDEN_appliedDefaultsForTenant", currentTenantId);
     }
-  }, [currentTenant?.value, userSettingsDefaults, formControl]);
+  }, [currentTenant?.value, tenantDefaults, userSettingsDefaults, formControl]);
 
   useEffect(() => {
     if (disableForwarding) {
