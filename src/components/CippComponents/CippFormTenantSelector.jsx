@@ -20,7 +20,11 @@ export const CippFormTenantSelector = ({
   ...other
 }) => {
   const parseOffboardingDefaults = (tenant) => {
-    const defaults = tenant.offboardingDefaults ?? tenant.OffboardingDefaults;
+    const defaults =
+      tenant.offboardingDefaults ??
+      tenant.OffboardingDefaults ??
+      tenant.customProperties?.offboardingDefaults ??
+      tenant.customProperties?.OffboardingDefaults;
     if (typeof defaults === "string") {
       try {
         return JSON.parse(defaults);
