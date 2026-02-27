@@ -295,6 +295,8 @@ export const CippTransportRuleDrawer = ({
       if (rule[field] !== null && rule[field] !== undefined && !formData[field]) {
         if (field === "SetSCL" && rule[field] !== null) {
           formData[field] = { value: rule[field].toString(), label: rule[field].toString() };
+        } else if (field === "RouteMessageOutboundConnector") {
+          formData[field] = { value: rule[field], label: rule[field] };
         } else {
           formData[field] = rule[field];
         }
@@ -961,6 +963,26 @@ export const CippTransportRuleDrawer = ({
                 labelField: (option) => `${option.displayName} (${option.userPrincipalName})`,
                 valueField: "userPrincipalName",
                 dataKey: "Results",
+              }}
+            />
+          </Grid>
+        );
+
+      case "RouteMessageOutboundConnector":
+        return (
+          <Grid size={12} key={actionValue}>
+            <CippFormComponent
+              type="autoComplete"
+              label={actionLabel}
+              name={actionValue}
+              formControl={formControl}
+              multiple={false}
+              creatable={false}
+              api={{
+                url: "/api/ListExchangeConnectors",
+                labelField: (option) => `${option.Name}${option.cippconnectortype ? ` (${option.cippconnectortype})` : ""}`,
+                valueField: "Name",
+                dataFilter: (options) => options.filter((option) => option.rawData?.cippconnectortype === "Outbound"),
               }}
             />
           </Grid>
