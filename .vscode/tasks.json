@@ -8,7 +8,7 @@
     {
       "label": "Run Azurite",
       "type": "shell",
-      "command": "azurite --location ../",
+      "command": "azurite --location ../ --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0",
       "isBackground": true,
       "options": {
         "env": {
