@@ -290,6 +290,15 @@ export const CippTransportRuleDrawer = ({
     if (rule.ApplyHtmlDisclaimerFallbackAction) {
       formData.ApplyHtmlDisclaimerFallbackAction = { value: rule.ApplyHtmlDisclaimerFallbackAction, label: rule.ApplyHtmlDisclaimerFallbackAction };
     }
+    if (rule.IncidentReportContent) {
+      const incidentReportContentValues = Array.isArray(rule.IncidentReportContent)
+        ? rule.IncidentReportContent
+        : rule.IncidentReportContent
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+      formData.IncidentReportContent = incidentReportContentValues.map((item) => ({ value: item, label: item }));
+    }
     
     Object.keys(actionFieldMap).forEach(field => {
       if (rule[field] !== null && rule[field] !== undefined && !formData[field]) {
@@ -455,6 +464,32 @@ export const CippTransportRuleDrawer = ({
           if (values.ApplyHtmlDisclaimerFallbackAction) {
             const fallback = values.ApplyHtmlDisclaimerFallbackAction;
             apiData.ApplyHtmlDisclaimerFallbackAction = fallback?.value || fallback;
+          }
+        } else if (actionValue === "GenerateIncidentReport") {
+          if (values.GenerateIncidentReport !== undefined) {
+            const fieldValue = values.GenerateIncidentReport;
+            if (Array.isArray(fieldValue)) {
+              apiData.GenerateIncidentReport = fieldValue.map((item) => {
+                if (item && typeof item === "object" && item.value !== undefined) {
+                  return item.value;
+                }
+                return item;
+              });
+            } else {
+              apiData.GenerateIncidentReport = fieldValue;
+            }
+          }
+          if (values.IncidentReportContent !== undefined) {
+            const fieldValue = values.IncidentReportContent;
+            const incidentReportValues = Array.isArray(fieldValue)
+              ? fieldValue.map((item) => {
+                if (item && typeof item === "object" && item.value !== undefined) {
+                  return item.value;
+                }
+                return item;
+              })
+              : [fieldValue];
+            apiData.IncidentReportContent = incidentReportValues.filter(Boolean).join(",");
           }
         } else if (values[actionValue] !== undefined) {
           const fieldValue = values[actionValue];
@@ -685,6 +720,18 @@ export const CippTransportRuleDrawer = ({
     { value: "GenerateIncidentReport", label: "Generate incident report and send to..." },
     { value: "GenerateNotification", label: "Notify the sender with a message..." },
     { value: "ApplyOME", label: "Apply Office 365 Message Encryption" },
+  ];
+  const incidentReportContentOptions = [
+    { value: "Sender", label: "Sender" },
+    { value: "Recipients", label: "Recipients" },
+    { value: "Subject", label: "Subject" },
+    { value: "CC", label: "CC" },
+    { value: "BCC", label: "BCC" },
+    { value: "Severity", label: "Severity" },
+    { value: "RuleDetections", label: "RuleDetections" },
+    { value: "FalsePositive", label: "FalsePositive" },
+    { value: "IdMatch", label: "IdMatch" },
+    { value: "AttachOriginalMail", label: "AttachOriginalMail" },
   ];
 
   const renderConditionField = (condition) => {
@@ -945,7 +992,6 @@ export const CippTransportRuleDrawer = ({
       case "BlindCopyTo":
       case "CopyTo":
       case "ModerateMessageByUser":
-      case "GenerateIncidentReport":
         return (
           <Grid size={12} key={actionValue}>
             <CippFormComponent
@@ -968,6 +1014,47 @@ export const CippTransportRuleDrawer = ({
                 dataKey: "Results",
               }}
             />
+          </Grid>
+        );
+
+      case "GenerateIncidentReport":
+        return (
+          <Grid size={12} key={actionValue}>
+            <Grid container spacing={2}>
+              <Grid size={12}>
+                <CippFormComponent
+                  type="autoComplete"
+                  label={actionLabel}
+                  name={actionValue}
+                  formControl={formControl}
+                  multiple={true}
+                  api={{
+                    url: "/api/ListGraphRequest",
+                    queryKey: `Users-TransportRules-${currentTenant}`,
+                    data: {
+                      Endpoint: "users",
+                      tenantFilter: currentTenant,
+                      $select: "id,displayName,userPrincipalName",
+                      $top: 999,
+                    },
+                    labelField: (option) => `${option.displayName} (${option.userPrincipalName})`,
+                    valueField: "userPrincipalName",
+                    dataKey: "Results",
+                  }}
+                />
+              </Grid>
+              <Grid size={12}>
+                <CippFormComponent
+                  type="autoComplete"
+                  label="Incident report content"
+                  name="IncidentReportContent"
+                  formControl={formControl}
+                  multiple={true}
+                  options={incidentReportContentOptions}
+                  creatable={false}
+                />
+              </Grid>
+            </Grid>
           </Grid>
         );
 
