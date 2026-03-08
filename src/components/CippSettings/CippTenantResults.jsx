@@ -19,6 +19,7 @@ export const CippTenantResults = (props) => {
               "ExchangeStatus",
               "MissingRoles",
               "GDAPRoles",
+              "CPVPermissionsStatus",
             ]}
             offCanvas={{
               extendedInfoFields: [
@@ -31,6 +32,9 @@ export const CippTenantResults = (props) => {
                 "OrgManagementRepairNeeeded",
                 "OrgManagementRoles",
                 "OrgManagementRolesMissing",
+                "CPVPermissionsStatus",
+                "CPVMissingDelegatedPermissions",
+                "CPVMissingApplicationPermissions",
               ],
             }}
           />
@@ -74,6 +78,7 @@ export const CippTenantResults = (props) => {
             "ExchangeStatus",
             "MissingRoles",
             "GDAPRoles",
+            "CPVPermissionsStatus",
           ]}
           offCanvas={{
             extendedInfoFields: [
@@ -83,6 +88,9 @@ export const CippTenantResults = (props) => {
               "LastRun",
               "GraphTest",
               "ExchangeTest",
+              "CPVPermissionsStatus",
+              "CPVMissingDelegatedPermissions",
+              "CPVMissingApplicationPermissions",
             ],
           }}
         />
