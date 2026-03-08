@@ -116,7 +116,13 @@ export const CippTransportRuleDrawer = ({
       FromAddressMatchesPatterns: "Sender address matches patterns...",
       AttachmentContainsWords: "Attachment content contains words...",
       AttachmentMatchesPatterns: "Attachment content matches patterns...",
+      AttachmentNameMatchesPatterns: "Attachment name matches patterns...",
+      AttachmentPropertyContainsWords: "Attachment properties contain words...",
       AttachmentExtensionMatchesWords: "Attachment extension is...",
+      AttachmentHasExecutableContent: "Attachment has executable content",
+      AttachmentIsPasswordProtected: "Attachment is password protected",
+      AttachmentIsUnsupported: "Attachment type is unsupported",
+      AttachmentProcessingLimitExceeded: "Attachment processing limit exceeded",
       AttachmentSizeOver: "Attachment size is greater than...",
       MessageSizeOver: "Message size is greater than...",
       SCLOver: "SCL is greater than or equal to...",
@@ -468,16 +474,10 @@ export const CippTransportRuleDrawer = ({
         } else if (actionValue === "GenerateIncidentReport") {
           if (values.GenerateIncidentReport !== undefined) {
             const fieldValue = values.GenerateIncidentReport;
-            if (Array.isArray(fieldValue)) {
-              apiData.GenerateIncidentReport = fieldValue.map((item) => {
-                if (item && typeof item === "object" && item.value !== undefined) {
-                  return item.value;
-                }
-                return item;
-              });
-            } else {
-              apiData.GenerateIncidentReport = fieldValue;
-            }
+            apiData.GenerateIncidentReport =
+              fieldValue && typeof fieldValue === "object" && fieldValue.value !== undefined
+                ? fieldValue.value
+                : fieldValue;
           }
           if (values.IncidentReportContent !== undefined) {
             const fieldValue = values.IncidentReportContent;
@@ -677,7 +677,13 @@ export const CippTransportRuleDrawer = ({
     { value: "FromAddressMatchesPatterns", label: "Sender address matches patterns..." },
     { value: "AttachmentContainsWords", label: "Attachment content contains words..." },
     { value: "AttachmentMatchesPatterns", label: "Attachment content matches patterns..." },
+    { value: "AttachmentNameMatchesPatterns", label: "Attachment name matches patterns..." },
+    { value: "AttachmentPropertyContainsWords", label: "Attachment properties contain words..." },
     { value: "AttachmentExtensionMatchesWords", label: "Attachment extension is..." },
+    { value: "AttachmentHasExecutableContent", label: "Attachment has executable content" },
+    { value: "AttachmentIsPasswordProtected", label: "Attachment is password protected" },
+    { value: "AttachmentIsUnsupported", label: "Attachment type is unsupported" },
+    { value: "AttachmentProcessingLimitExceeded", label: "Attachment processing limit exceeded" },
     { value: "AttachmentSizeOver", label: "Attachment size is greater than..." },
     { value: "MessageSizeOver", label: "Message size is greater than..." },
     { value: "SCLOver", label: "SCL is greater than or equal to..." },
@@ -897,6 +903,35 @@ export const CippTransportRuleDrawer = ({
           </Grid>
         );
 
+      case "AttachmentHasExecutableContent":
+      case "AttachmentIsPasswordProtected":
+      case "AttachmentIsUnsupported":
+      case "AttachmentProcessingLimitExceeded":
+        return (
+          <Grid size={12} key={conditionValue}>
+            <CippFormComponent
+              type="switch"
+              label={conditionLabel}
+              name={conditionValue}
+              formControl={formControl}
+            />
+          </Grid>
+        );
+
+      case "AttachmentNameMatchesPatterns":
+      case "AttachmentPropertyContainsWords":
+        return (
+          <Grid size={12} key={conditionValue}>
+            <CippFormComponent
+              type="textField"
+              label={`${conditionLabel} (comma-separated)`}
+              name={conditionValue}
+              formControl={formControl}
+              placeholder="Enter comma-separated values"
+            />
+          </Grid>
+        );
+
       case "SenderDomainIs":
       case "RecipientDomainIs":
         return (
@@ -1027,7 +1062,7 @@ export const CippTransportRuleDrawer = ({
                   label={actionLabel}
                   name={actionValue}
                   formControl={formControl}
-                  multiple={true}
+                  multiple={false}
                   api={{
                     url: "/api/ListGraphRequest",
                     queryKey: `Users-TransportRules-${currentTenant}`,
