@@ -34,6 +34,13 @@ export const CippTransportRuleDrawer = ({
     waiting: !!drawerVisible || !!isEditMode || !!ruleId,
   });
 
+  // Fetch all rules for priority suggestion in create mode (shares cache key with list page)
+  const allRulesInfo = ApiGetCall({
+    url: `/api/ListTransportRules?tenantFilter=${currentTenant}`,
+    queryKey: `List Transport Rules For Priority - ${currentTenant}`,
+    waiting: !!drawerVisible,
+  });
+
   // Default form values
   const defaultFormValues = useMemo(
     () => ({
@@ -385,6 +392,28 @@ export const CippTransportRuleDrawer = ({
       resetForm();
     }
   }, [resetForm, drawerVisible, isEditMode]);
+
+  useEffect(() => {
+    if (!drawerVisible || isEditMode || !Array.isArray(allRulesInfo.data?.Results)) {
+      return;
+    }
+
+    const priorities = allRulesInfo.data.Results
+      .map((rule) => Number(rule?.Priority))
+      .filter((priority) => Number.isFinite(priority));
+
+    if (!priorities.length) {
+      return;
+    }
+
+    const currentPriority = formControl.getValues("Priority");
+    if (currentPriority === "" || currentPriority === null || currentPriority === undefined) {
+      formControl.setValue("Priority", Math.max(...priorities) + 1, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+  }, [drawerVisible, isEditMode, allRulesInfo.data, formControl]);
 
   // Custom data formatter for API submission
   const customDataFormatter = useCallback(
