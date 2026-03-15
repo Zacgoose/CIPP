@@ -16,7 +16,7 @@ import { Footer } from "./footer";
 import { MobileNav } from "./mobile-nav";
 import { SideNav } from "./side-nav";
 import { TopNav } from "./top-nav";
-import { ApiGetCall } from "../api/ApiCall";
+import { ApiGetCall, ApiPostCall } from "../api/ApiCall";
 import { useDispatch } from "react-redux";
 import { showToast } from "../store/toasts";
 import { Box, Container, Grid } from "@mui/system";
@@ -91,6 +91,7 @@ export const Layout = (props) => {
   const [menuItems, setMenuItems] = useState(nativeMenuItems);
   const lastUserSettingsUpdate = useRef(null);
   const currentTenant = settings?.currentTenant;
+  const currentUserDetails = currentRole.data?.clientPrincipal?.userDetails;
   const [hideSidebar, setHideSidebar] = useState(false);
 
   const swaStatus = ApiGetCall({
@@ -210,6 +211,10 @@ export const Layout = (props) => {
     url: "/api/ListUserSettings",
     queryKey: "userSettings",
   });
+  const saveUserSettingsPost = ApiPostCall({
+    relatedQueryKeys: "userSettings",
+  });
+  const lastSavedBookmarkSettings = useRef("");
 
   useEffect(() => {
     if (userSettingsAPI.isSuccess && !userSettingsAPI.isFetching) {
@@ -226,27 +231,15 @@ export const Layout = (props) => {
         if (userSettingsAPI?.data?.currentTheme) {
           delete userSettingsAPI.data.currentTheme;
         }
-        // get current devtools settings
+        // get current devtools settings (device-local only)
         var showDevtools = settings.showDevtools;
-        // get current bookmarks and navigation settings (device-local only)
-        var bookmarks = settings.bookmarks;
-        var bookmarkSidebar = settings.bookmarkSidebar;
-        var bookmarkPopover = settings.bookmarkPopover;
-        var bookmarkReorderMode = settings.bookmarkReorderMode;
-        var bookmarkLocked = settings.bookmarkLocked;
-        var bookmarkSortOrder = settings.bookmarkSortOrder;
-        var bookmarksOpen = settings.bookmarksOpen;
 
         settings.handleUpdate({
           ...userSettingsAPI.data,
-          bookmarks,
-          bookmarkSidebar,
-          bookmarkPopover,
-          bookmarkReorderMode,
-          bookmarkLocked,
-          bookmarkSortOrder,
-          bookmarksOpen,
           showDevtools,
+        });
+        lastSavedBookmarkSettings.current = JSON.stringify({
+          bookmarks: userSettingsAPI.data?.bookmarks || [],
         });
 
         // Track this update and set completion status
@@ -259,6 +252,40 @@ export const Layout = (props) => {
     userSettingsAPI.data,
     userSettingsAPI.isFetching,
     userSettingsAPI.dataUpdatedAt,
+  ]);
+
+  useEffect(() => {
+    if (!userSettingsComplete || !currentUserDetails) {
+      return;
+    }
+
+    const currentSettings = {
+      bookmarks: settings.bookmarks || [],
+    };
+    const settingsSignature = JSON.stringify(currentSettings);
+    if (settingsSignature === lastSavedBookmarkSettings.current) {
+      return;
+    }
+
+    const saveDelay = setTimeout(() => {
+      saveUserSettingsPost.mutate({
+        url: "/api/ExecUserSettings",
+        data: {
+          user: currentUserDetails,
+          currentSettings,
+        },
+      }, {
+        onSuccess: () => {
+          lastSavedBookmarkSettings.current = settingsSignature;
+        },
+      });
+    }, 500);
+
+    return () => clearTimeout(saveDelay);
+  }, [
+    currentUserDetails,
+    userSettingsComplete,
+    settings.bookmarks,
   ]);
 
   const version = ApiGetCall({
