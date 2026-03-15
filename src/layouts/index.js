@@ -91,7 +91,6 @@ export const Layout = (props) => {
   const [menuItems, setMenuItems] = useState(nativeMenuItems);
   const lastUserSettingsUpdate = useRef(null);
   const currentTenant = settings?.currentTenant;
-  const currentUserDetails = currentRole.data?.clientPrincipal?.userDetails;
   const [hideSidebar, setHideSidebar] = useState(false);
 
   const swaStatus = ApiGetCall({
@@ -112,6 +111,8 @@ export const Layout = (props) => {
     queryKey: "featureFlags",
     staleTime: 600000, // Cache for 10 minutes
   });
+
+  const currentUserDetails = currentRole.data?.clientPrincipal?.userDetails;
 
   useEffect(() => {
     if (currentRole.isSuccess && !currentRole.isFetching) {
