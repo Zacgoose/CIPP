@@ -16,7 +16,7 @@ import { Footer } from "./footer";
 import { MobileNav } from "./mobile-nav";
 import { SideNav } from "./side-nav";
 import { TopNav } from "./top-nav";
-import { ApiGetCall, ApiPostCall } from "../api/ApiCall";
+import { ApiGetCall } from "../api/ApiCall";
 import { useDispatch } from "react-redux";
 import { showToast } from "../store/toasts";
 import { Box, Container, Grid } from "@mui/system";
@@ -86,7 +86,6 @@ export const Layout = (props) => {
   const mdDown = useMediaQuery((theme) => theme.breakpoints.down("md"));
   const settings = useSettings();
   const mobileNav = useMobileNav();
-  const [userSettingsComplete, setUserSettingsComplete] = useState(false);
   const [fetchingVisible, setFetchingVisible] = useState([]);
   const [menuItems, setMenuItems] = useState(nativeMenuItems);
   const lastUserSettingsUpdate = useRef(null);
@@ -111,8 +110,6 @@ export const Layout = (props) => {
     queryKey: "featureFlags",
     staleTime: 600000, // Cache for 10 minutes
   });
-
-  const currentUserDetails = currentRole.data?.clientPrincipal?.userDetails;
 
   useEffect(() => {
     if (currentRole.isSuccess && !currentRole.isFetching) {
@@ -212,40 +209,33 @@ export const Layout = (props) => {
     url: "/api/ListUserSettings",
     queryKey: "userSettings",
   });
-  const saveUserSettingsPost = ApiPostCall({
-    relatedQueryKeys: "userSettings",
-  });
-  const lastSavedBookmarkSettings = useRef("");
 
   useEffect(() => {
     if (userSettingsAPI.isSuccess && !userSettingsAPI.isFetching) {
       // Only update if the data has actually changed (using dataUpdatedAt as a proxy)
       const dataUpdatedAt = userSettingsAPI.dataUpdatedAt;
       if (dataUpdatedAt && dataUpdatedAt !== lastUserSettingsUpdate.current) {
+        const { bookmarks: _bookmarks, ...serverSettings } = userSettingsAPI.data || {};
         //if userSettingsAPI.data contains offboardingDefaults.user, delete that specific key.
-        if (userSettingsAPI.data.offboardingDefaults?.user) {
-          delete userSettingsAPI.data.offboardingDefaults.user;
+        if (serverSettings.offboardingDefaults?.user) {
+          delete serverSettings.offboardingDefaults.user;
         }
-        if (userSettingsAPI.data.offboardingDefaults?.keepCopy) {
-          delete userSettingsAPI.data.offboardingDefaults.keepCopy;
+        if (serverSettings.offboardingDefaults?.keepCopy) {
+          delete serverSettings.offboardingDefaults.keepCopy;
         }
-        if (userSettingsAPI?.data?.currentTheme) {
-          delete userSettingsAPI.data.currentTheme;
+        if (serverSettings?.currentTheme) {
+          delete serverSettings.currentTheme;
         }
         // get current devtools settings (device-local only)
         var showDevtools = settings.showDevtools;
 
         settings.handleUpdate({
-          ...userSettingsAPI.data,
+          ...serverSettings,
           showDevtools,
-        });
-        lastSavedBookmarkSettings.current = JSON.stringify({
-          bookmarks: userSettingsAPI.data?.bookmarks || [],
         });
 
         // Track this update and set completion status
         lastUserSettingsUpdate.current = dataUpdatedAt;
-        setUserSettingsComplete(true);
       }
     }
   }, [
@@ -253,40 +243,6 @@ export const Layout = (props) => {
     userSettingsAPI.data,
     userSettingsAPI.isFetching,
     userSettingsAPI.dataUpdatedAt,
-  ]);
-
-  useEffect(() => {
-    if (!userSettingsComplete || !currentUserDetails) {
-      return;
-    }
-
-    const currentSettings = {
-      bookmarks: settings.bookmarks || [],
-    };
-    const settingsSignature = JSON.stringify(currentSettings);
-    if (settingsSignature === lastSavedBookmarkSettings.current) {
-      return;
-    }
-
-    const saveDelay = setTimeout(() => {
-      saveUserSettingsPost.mutate({
-        url: "/api/ExecUserSettings",
-        data: {
-          user: currentUserDetails,
-          currentSettings,
-        },
-      }, {
-        onSuccess: () => {
-          lastSavedBookmarkSettings.current = settingsSignature;
-        },
-      });
-    }, 500);
-
-    return () => clearTimeout(saveDelay);
-  }, [
-    currentUserDetails,
-    userSettingsComplete,
-    settings.bookmarks,
   ]);
 
   const version = ApiGetCall({

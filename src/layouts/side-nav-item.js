@@ -7,7 +7,7 @@ import ArrowTopRightOnSquareIcon from "@heroicons/react/24/outline/ArrowTopRight
 import { Box, ButtonBase, Collapse, SvgIcon, Stack } from "@mui/material";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
-import { useSettings } from "../hooks/use-settings";
+import { useUserBookmarks } from "../hooks/use-user-bookmarks";
 
 export const SideNavItem = (props) => {
   const {
@@ -24,7 +24,7 @@ export const SideNavItem = (props) => {
 
   const [open, setOpen] = useState(openImmediately);
   const [hovered, setHovered] = useState(false);
-  const { handleUpdate, bookmarks = [] } = useSettings();
+  const { bookmarks, setBookmarks } = useUserBookmarks();
   const isBookmarked = bookmarks.some((bookmark) => bookmark.path === path);
 
   const handleToggle = useCallback(() => {
@@ -34,13 +34,15 @@ export const SideNavItem = (props) => {
   const handleBookmarkToggle = useCallback(
     (event) => {
       event.stopPropagation();
-      handleUpdate({
-        bookmarks: isBookmarked
+      setBookmarks(
+        isBookmarked
           ? bookmarks.filter((bookmark) => bookmark.path !== path)
-          : bookmarks.length >= 50 ? bookmarks : [...bookmarks, { label: title, path }],
-      });
+          : bookmarks.length >= 50
+            ? bookmarks
+            : [...bookmarks, { label: title, path }]
+      );
     },
-    [isBookmarked, bookmarks, handleUpdate, path, title]
+    [isBookmarked, bookmarks, setBookmarks, path, title]
   );
 
   // Dynamic spacing and font sizing based on depth
