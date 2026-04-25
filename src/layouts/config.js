@@ -726,6 +726,23 @@ export const nativeMenuItems = [
         ],
       },
       {
+        title: 'DMARC',
+        permissions: ['Exchange.Mailbox.*'],
+        items: [
+          {
+            title: 'DMARC Configuration',
+            path: '/email/dmarc',
+            permissions: ['Exchange.Mailbox.*'],
+            scope: 'global',
+          },
+          {
+            title: 'DMARC Reports',
+            path: '/email/dmarc/reports',
+            permissions: ['Exchange.Mailbox.*'],
+          },
+        ],
+      },
+      {
         title: 'Resource Management',
         permissions: ['Exchange.Equipment.*'],
         items: [

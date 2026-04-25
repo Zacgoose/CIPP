@@ -1,0 +1,4 @@
+[
+  { "label": "Dashboard", "path": "/email/dmarc/reports" },
+  { "label": "Report Data", "path": "/email/dmarc/reports/table" }
+]
