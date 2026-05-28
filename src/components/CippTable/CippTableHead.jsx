@@ -67,11 +67,12 @@ export const CippTableHead = ({ table, showColumnFilters, sticky = true, enableM
                   minWidth: column.columnDef.minSize ?? width,
                   maxWidth: width,
                   position: 'relative',
-                  padding: '8px 16px',
+                  padding: isInternal ? '4px' : '8px 16px',
                   userSelect: 'none',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
+                  backgroundColor: 'background.paper',
                   ...pinnedStyles(column),
                 }}
               >
@@ -128,17 +129,30 @@ export const CippTableHead = ({ table, showColumnFilters, sticky = true, enableM
                     onClick={(e) => e.stopPropagation()}
                     sx={{
                       position: 'absolute',
-                      right: 0,
+                      right: '-4px',
                       top: 0,
                       height: '100%',
-                      width: '4px',
+                      width: '9px',
                       cursor: 'col-resize',
                       userSelect: 'none',
                       touchAction: 'none',
-                      backgroundColor: column.getIsResizing()
-                        ? 'primary.main'
-                        : 'transparent',
-                      '&:hover': { backgroundColor: 'action.hover' },
+                      zIndex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      '&::after': {
+                        content: '""',
+                        width: '1px',
+                        height: '60%',
+                        backgroundColor: column.getIsResizing()
+                          ? 'primary.main'
+                          : 'divider',
+                        transition: 'background-color 0.15s',
+                      },
+                      '&:hover::after': {
+                        width: '2px',
+                        backgroundColor: 'primary.main',
+                      },
                     }}
                   />
                 )}

@@ -92,6 +92,7 @@ export const CippTableBody = ({
           >
             {row.getVisibleCells().map((cell) => {
               const width = cell.column.getSize()
+              const isInternal = cell.column.columnDef.meta?.isInternal === true
               return (
                 <TableCell
                   key={cell.id}
@@ -103,7 +104,7 @@ export const CippTableBody = ({
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    padding: '4px 16px',
+                    padding: isInternal ? '4px' : '4px 16px',
                     fontSize: '0.8125rem',
                     ...pinnedStyles(cell.column),
                   }}

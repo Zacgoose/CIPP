@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, SvgIcon } from '@mui/material'
+import { IconButton, Menu, MenuItem, ListItemText, SvgIcon } from '@mui/material'
 import { MoreVert, MoreHoriz, More } from '@mui/icons-material'
 
 // Per-row action menu. Mirrors the renderRowActionMenuItems flow from the old
@@ -33,7 +33,12 @@ export const CippRowActionsCell = ({
       <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)}>
         <MoreVert fontSize="small" />
       </IconButton>
-      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={closeMenu}>
+      <Menu
+        anchorEl={anchor}
+        open={Boolean(anchor)}
+        onClose={closeMenu}
+        MenuListProps={{ dense: true, sx: { p: 1 } }}
+      >
         {Array.isArray(actions) &&
           actions.map((action, idx) => (
             <MenuItem
@@ -56,9 +61,9 @@ export const CippRowActionsCell = ({
                 closeMenu()
               }}
             >
-              <ListItemIcon sx={{ minWidth: 30 }}>
-                <SvgIcon fontSize="small">{action.icon}</SvgIcon>
-              </ListItemIcon>
+              <SvgIcon fontSize="small" sx={{ minWidth: '30px' }}>
+                {action.icon}
+              </SvgIcon>
               <ListItemText>{action.label}</ListItemText>
             </MenuItem>
           ))}
@@ -69,13 +74,13 @@ export const CippRowActionsCell = ({
               closeMenu()
             }}
           >
-            <ListItemIcon>
+            <SvgIcon fontSize="small" sx={{ minWidth: '30px' }}>
               {Array.isArray(actions) && actions.length > 0 ? (
-                <MoreHoriz fontSize="small" />
+                <MoreHoriz />
               ) : (
-                <More fontSize="small" />
+                <More />
               )}
-            </ListItemIcon>
+            </SvgIcon>
             <ListItemText>More Info</ListItemText>
           </MenuItem>
         )}
