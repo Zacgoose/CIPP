@@ -136,7 +136,7 @@ export const getCippFilterVariant = (providedColumnKeys, arg) => {
     return {
       filterVariant: "datetime-range",
       sortingFn: "dateTimeNullsLast",
-      filterFn: "betweenInclusive",
+      filterFn: "dateBetween",
     };
   }
 };

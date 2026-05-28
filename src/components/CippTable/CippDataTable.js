@@ -346,7 +346,7 @@ export const CippDataTable = (props) => {
       })
     }
     return cols
-  }, [usedColumns, modeInfo.enableRowSelection, modeInfo.enableRowActions, modeInfo.selectAllMode, actions, offCanvas, settings, createDialog])
+  }, [usedColumns, modeInfo.enableRowSelection, modeInfo.enableRowActions, modeInfo.selectAllMode, actions, offCanvas, settings?.currentTenant, settings?.handleUpdate, createDialog])
 
   // Sanitize columnVisibility to remove invalid keys.
   const sanitizedColumnVisibility = useMemo(() => {
@@ -384,9 +384,20 @@ export const CippDataTable = (props) => {
 
   // Sync external columnVisibility state down into the table when our orchestrator
   // recomputes it (AllTenants/Tenant column toggles, simpleColumns changes, etc.).
+  // Compare current table visibility against the desired map and only push when
+  // it actually differs to avoid render loops with our own onColumnVisibilityChange.
+  const lastAppliedVisibilityRef = useRef(null)
   useEffect(() => {
-    table.setColumnVisibility(sanitizedColumnVisibility)
-  }, [sanitizedColumnVisibility])
+    const current = table.getState().columnVisibility
+    const next = sanitizedColumnVisibility
+    const keys = Object.keys(next)
+    const sameKeys = Object.keys(current).length === keys.length
+    const sameVals = sameKeys && keys.every((k) => current[k] === next[k])
+    if (!sameVals && lastAppliedVisibilityRef.current !== next) {
+      lastAppliedVisibilityRef.current = next
+      table.setColumnVisibility(next)
+    }
+  }, [sanitizedColumnVisibility, table])
 
   // Apply initial column filters (preset toolbar buttons) once after table mount.
   const appliedInitialFiltersRef = useRef(false)

@@ -76,7 +76,7 @@ export const CippColumnFilter = ({ column, table, enableModes = true }) => {
             <MenuItem
               key={m.option}
               onClick={() => {
-                column.columnDef.filterFn = m.option
+                table.setColumnFilterMode?.(column.id, m.option)
                 table.setColumnFilters((prev) => prev.map((f) => ({ ...f })))
                 setModeAnchor(null)
               }}
@@ -143,8 +143,6 @@ export const CippColumnFilter = ({ column, table, enableModes = true }) => {
 
   if (variant === 'datetime-range') {
     const [from, to] = Array.isArray(value) ? value : ['', '']
-    // Ensure datetime filterFn is set so date-strings are compared correctly.
-    if (column.columnDef.filterFn !== 'dateBetween') column.columnDef.filterFn = 'dateBetween'
     return (
       <Box sx={{ display: 'flex', gap: 0.5 }}>
         <TextField

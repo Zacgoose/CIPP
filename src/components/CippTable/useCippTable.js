@@ -188,6 +188,11 @@ export const useCippTable = ({
     initialState.showColumnFilters ?? false
   )
   const [isFullScreen, setIsFullScreen] = useState(false)
+  const [columnFilterFns, setColumnFilterFns] = useState({})
+
+  const setColumnFilterMode = useCallback((columnId, mode) => {
+    setColumnFilterFns((prev) => ({ ...prev, [columnId]: mode }))
+  }, [])
 
   // Bubble controlled-state changes up so the orchestrator can persist them.
   const setSorting = useCallback(
@@ -223,9 +228,23 @@ export const useCippTable = ({
     [onColumnVisibilityChange]
   )
 
+  // Apply per-column filterFn overrides (set via the filter-mode menu) without
+  // mutating the original columnDef. Memoized so referential identity only
+  // changes when the override map or columns change.
+  const resolvedColumns = useMemo(() => {
+    if (!columnFilterFns || Object.keys(columnFilterFns).length === 0) return columns
+    return columns.map((col) => {
+      const id = col.id ?? col.accessorKey
+      if (id && columnFilterFns[id]) {
+        return { ...col, filterFn: columnFilterFns[id] }
+      }
+      return col
+    })
+  }, [columns, columnFilterFns])
+
   const table = useReactTable({
     data,
-    columns,
+    columns: resolvedColumns,
     state: {
       sorting,
       columnFilters,
@@ -271,20 +290,28 @@ export const useCippTable = ({
     initialState,
   })
 
-  // Augment table with MRT-shaped extras the toolbar relies on.
-  const stateRef = useRef({ showColumnFilters, isFullScreen })
-  stateRef.current = { showColumnFilters, isFullScreen }
+  // Augment table with MRT-shaped extras the toolbar relies on. We mutate the
+  // table instance returned by useReactTable rather than wrapping it because
+  // child components hold a stable reference and TanStack itself reads back
+  // into `table.options`/`table.getState()` internally; constructing a proxy
+  // would diverge from those internal reads. This is intentional and scoped to
+  // surface controls (filter-row visibility, fullscreen) plus the filter-mode
+  // setter that lives outside TanStack's state model.
+  const stateRef = useRef({ showColumnFilters, isFullScreen, columnFilterFns })
+  stateRef.current = { showColumnFilters, isFullScreen, columnFilterFns }
 
   const originalGetState = table.getState
   table.getState = () => ({
     ...originalGetState.call(table),
     showColumnFilters: stateRef.current.showColumnFilters,
     isFullScreen: stateRef.current.isFullScreen,
+    columnFilterFns: stateRef.current.columnFilterFns,
   })
   table.setShowColumnFilters = (value) =>
     setShowColumnFilters((prev) => (typeof value === 'function' ? value(prev) : value))
   table.setIsFullScreen = (value) =>
     setIsFullScreen((prev) => (typeof value === 'function' ? value(prev) : value))
+  table.setColumnFilterMode = setColumnFilterMode
 
   return {
     table,
