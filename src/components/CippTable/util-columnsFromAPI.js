@@ -286,13 +286,29 @@ export const utilColumnsFromAPI = (dataArray) => {
             const value = resolveValue(row)
             return getCippFormatting(value, accessorKey, 'text')
           },
-          ...getCippFilterVariant(accessorKey, {
-            sampleValue,
-            values: valuesForColumn,
-            getValue: (row) => resolveValue(row),
-            dataArray: filterSample,
-          }),
-          Cell: ({ row }) => {
+          ...(() => {
+            // getCippFilterVariant returns { filterVariant, filterSelectOptions, sortingFn, filterFn }
+            // — move the MRT-style top-level keys onto TanStack's `meta` namespace while leaving
+            // `sortingFn` / `filterFn` (which TanStack reads natively) at the top level.
+            const variant = getCippFilterVariant(accessorKey, {
+              sampleValue,
+              values: valuesForColumn,
+              getValue: (row) => resolveValue(row),
+              dataArray: filterSample,
+            })
+            if (!variant) return {}
+            const { filterVariant, filterSelectOptions, sortingFn, filterFn, ...rest } = variant
+            return {
+              ...rest,
+              ...(sortingFn ? { sortingFn } : {}),
+              ...(filterFn ? { filterFn } : {}),
+              meta: {
+                ...(filterVariant ? { filterVariant } : {}),
+                ...(filterSelectOptions ? { filterSelectOptions } : {}),
+              },
+            }
+          })(),
+          cell: ({ row }) => {
             const value = resolveValue(row.original)
             return getCippFormatting(value, accessorKey)
           },

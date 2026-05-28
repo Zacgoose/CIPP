@@ -890,7 +890,7 @@ export const CIPPTableToptoolbar = React.memo(
                   <Divider />
                   {table
                     .getAllColumns()
-                    .filter((column) => !column.id.startsWith('mrt-'))
+                    .filter((column) => !column.columnDef.meta?.isInternal)
                     .map((column) => (
                       <MenuItem
                         key={column.id}
@@ -1081,7 +1081,7 @@ export const CIPPTableToptoolbar = React.memo(
               <Divider />
               {table
                 .getAllColumns()
-                .filter((column) => !column.id.startsWith('mrt-'))
+                .filter((column) => !column.columnDef.meta?.isInternal)
                 .map((column) => (
                   <MenuItem
                     key={column.id}
